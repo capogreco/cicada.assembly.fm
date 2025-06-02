@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dual-Stage Cicada Synthesis Prototype</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1a1a1a;
+            color: #f0f0f0;
+        }
+        .control {
+            margin: 15px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        button {
+            padding: 10px 20px;
+            background: #444;
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: monospace;
+            margin: 5px;
+        }
+        button:hover {
+            background: #555;
+        }
+        #visualizer {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .stage {
+            border: 1px solid #444;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .stage h3 {
+            margin-top: 0;
+            color: #4a8;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dual-Stage Cicada Synthesis Prototype</h1>
+    
+    <button id="startAudio">Start Audio</button>
+    <button id="stopAudio" disabled>Stop Audio</button>
+    
+    <canvas id="visualizer"></canvas>
+    
+    <div class="stage">
+        <h3>Stage 1: Tymbal Click Generation</h3>
+        
+        <div class="control">
+            <label for="clickRate">Click Rate: <span id="clickRateValue">200</span> Hz</label>
+            <input type="range" id="clickRate" min="50" max="800" value="200">
+        </div>
+        
+        <div class="control">
+            <label for="clickDuration">Click Duration: <span id="clickDurationValue">3</span> ms</label>
+            <input type="range" id="clickDuration" min="1" max="10" step="0.5" value="3">
+        </div>
+        
+        <div class="control">
+            <label for="clickJitter">Timing Jitter: <span id="clickJitterValue">0.1</span></label>
+            <input type="range" id="clickJitter" min="0" max="0.3" step="0.01" value="0.1">
+        </div>
+        
+        <div class="control">
+            <label for="noiseAmount">Noise Amount: <span id="noiseAmountValue">0.7</span></label>
+            <input type="range" id="noiseAmount" min="0" max="1" step="0.01" value="0.7">
+        </div>
+        
+        <h4>Hierarchical Rhythms</h4>
+        
+        <div class="control">
+            <label for="pulseGroupSize">Pulse Group Size: <span id="pulseGroupSizeValue">6</span></label>
+            <input type="range" id="pulseGroupSize" min="2" max="12" step="1" value="6">
+        </div>
+        
+        <div class="control">
+            <label for="subGroupSize">Sub-Group Size: <span id="subGroupSizeValue">3</span></label>
+            <input type="range" id="subGroupSize" min="2" max="6" step="1" value="3">
+        </div>
+        
+        <div class="control">
+            <label for="groupSpacing">Group Spacing: <span id="groupSpacingValue">20</span> ms</label>
+            <input type="range" id="groupSpacing" min="5" max="100" step="1" value="20">
+        </div>
+        
+        <div class="control">
+            <label for="echemeRate">Echeme Rate: <span id="echemeRateValue">2.0</span> Hz</label>
+            <input type="range" id="echemeRate" min="0.1" max="10" step="0.1" value="2.0">
+        </div>
+        
+        <div class="control">
+            <label for="echemeDuration">Echeme Duration: <span id="echemeDurationValue">300</span> ms</label>
+            <input type="range" id="echemeDuration" min="50" max="2000" step="10" value="300">
+        </div>
+        
+        <div class="control">
+            <label for="echemeSpacing">Echeme Spacing: <span id="echemeSpacingValue">200</span> ms</label>
+            <input type="range" id="echemeSpacing" min="50" max="1000" step="10" value="200">
+        </div>
+        
+        <div class="control">
+            <label for="phraseIntensity">Phrase Intensity: <span id="phraseIntensityValue">1.0</span></label>
+            <input type="range" id="phraseIntensity" min="0.1" max="2.0" step="0.1" value="1.0">
+        </div>
+    </div>
+    
+    <div class="stage">
+        <h3>Stage 2: Abdominal Resonance</h3>
+        
+        <div class="control">
+            <label for="resonantFreq">Primary Resonance: <span id="resonantFreqValue">800</span> Hz</label>
+            <input type="range" id="resonantFreq" min="200" max="3000" value="800">
+        </div>
+        
+        <div class="control">
+            <label for="resonantQ">Resonance Q: <span id="resonantQValue">8</span></label>
+            <input type="range" id="resonantQ" min="1" max="30" step="0.5" value="8">
+        </div>
+        
+        <div class="control">
+            <label for="harmonicFreq">Harmonic Resonance: <span id="harmonicFreqValue">1600</span> Hz</label>
+            <input type="range" id="harmonicFreq" min="400" max="6000" value="1600">
+        </div>
+        
+        <div class="control">
+            <label for="harmonicQ">Harmonic Q: <span id="harmonicQValue">5</span></label>
+            <input type="range" id="harmonicQ" min="1" max="20" step="0.5" value="5">
+        </div>
+        
+        <div class="control">
+            <label for="volume">Volume: <span id="volumeValue">0.3</span></label>
+            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.3">
+        </div>
+    </div>
+    
+    <div class="preset-buttons">
+        <button id="presetGreengrocer">Greengrocer</button>
+        <button id="presetDoubleDrummer">Double Drummer</button>
+        <button id="presetTypewriter">Typewriter</button>
+        <button id="presetRedeye">Redeye</button>
+    </div>
+
+    <script>
+        let audioContext = null;
+        let cicadaNode = null;
+        let gainNode = null;
+        let analyser = null;
+
+        const startBtn = document.getElementById('startAudio');
+        const stopBtn = document.getElementById('stopAudio');
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetHeight;
+
+
+
+        async function startAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Load processor from separate file
+                await audioContext.audioWorklet.addModule('dual_stage_processor.js');
+                
+                // Create nodes
+                cicadaNode = new AudioWorkletNode(audioContext, 'dual-stage-cicada');
+                gainNode = audioContext.createGain();
+                analyser = audioContext.createAnalyser();
+                
+                // Connect nodes
+                cicadaNode.connect(gainNode);
+                gainNode.connect(analyser);
+                analyser.connect(audioContext.destination);
+                
+                gainNode.gain.value = 1.0;
+                
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                
+                // Start visualizer
+                drawVisualizer();
+                
+                console.log('Dual-stage cicada synthesis started');
+                
+            } catch (error) {
+                console.error('Error starting audio:', error);
+            }
+        }
+
+        function stopAudio() {
+            if (audioContext) {
+                audioContext.close();
+                audioContext = null;
+                cicadaNode = null;
+                gainNode = null;
+                analyser = null;
+                
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        function drawVisualizer() {
+            if (!analyser) return;
+            
+            requestAnimationFrame(drawVisualizer);
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+            
+            ctx.fillStyle = 'rgb(0, 0, 0)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            const barWidth = (canvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = (dataArray[i] / 255) * canvas.height;
+                
+                ctx.fillStyle = `rgb(${barHeight + 100}, 150, 50)`;
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                
+                x += barWidth + 1;
+            }
+        }
+
+        // Parameter controls
+        function setupControl(id, paramName, multiplier = 1) {
+            const slider = document.getElementById(id);
+            const valueDisplay = document.getElementById(id + 'Value');
+            
+            slider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value) * multiplier;
+                
+                // Custom display formatting for different parameters
+                if (id === 'clickDuration') {
+                    valueDisplay.textContent = (value * 1000).toFixed(1);
+                } else if (id === 'groupSpacing' || id === 'echemeDuration' || id === 'echemeSpacing') {
+                    valueDisplay.textContent = (parseFloat(e.target.value)).toString();
+                } else {
+                    valueDisplay.textContent = multiplier === 1 ? value : (value * 1000).toFixed(1);
+                }
+                
+                if (cicadaNode && audioContext) {
+                    cicadaNode.parameters.get(paramName).setValueAtTime(value, audioContext.currentTime);
+                }
+            });
+        }
+
+        // Setup all controls
+        setupControl('clickRate', 'clickRate');
+        setupControl('clickDuration', 'clickDuration', 0.001); // Convert ms to seconds
+        setupControl('clickJitter', 'clickJitter');
+        setupControl('noiseAmount', 'noiseAmount');
+        setupControl('resonantFreq', 'resonantFreq');
+        setupControl('resonantQ', 'resonantQ');
+        setupControl('harmonicFreq', 'harmonicFreq');
+        setupControl('harmonicQ', 'harmonicQ');
+        setupControl('volume', 'volume');
+        
+        // Setup rhythm controls with custom multipliers
+        setupControl('pulseGroupSize', 'pulseGroupSize');
+        setupControl('subGroupSize', 'subGroupSize');
+        setupControl('groupSpacing', 'groupSpacing', 0.001); // Convert ms to seconds
+        setupControl('echemeRate', 'echemeRate');
+        setupControl('echemeDuration', 'echemeDuration', 0.001); // Convert ms to seconds
+        setupControl('echemeSpacing', 'echemeSpacing', 0.001); // Convert ms to seconds
+        setupControl('phraseIntensity', 'phraseIntensity');
+
+        // Preset functions with smooth 3-second ramps
+        function applyPreset(params) {
+            const rampDuration = 3000; // 3 seconds in milliseconds
+            const startTime = Date.now();
+            
+            Object.entries(params).forEach(([key, value]) => {
+                const slider = document.getElementById(key);
+                const valueDisplay = document.getElementById(key + 'Value');
+                
+                if (slider && valueDisplay) {
+                    const startValue = parseFloat(slider.value);
+                    const targetValue = value;
+                    
+                    let startParamValue = startValue;
+                    let targetParamValue = value;
+                    
+                    if (key === 'clickDuration') {
+                        startParamValue = startValue * 0.001; // Convert to seconds
+                        targetParamValue = value * 0.001; // Convert to seconds
+                    } else if (key === 'groupSpacing' || key === 'echemeDuration' || key === 'echemeSpacing') {
+                        startParamValue = startValue * 0.001; // Convert to seconds
+                        targetParamValue = value * 0.001; // Convert to seconds
+                    }
+                    
+                    if (cicadaNode && audioContext) {
+                        // Properly handle parameter ramping
+                        const param = cicadaNode.parameters.get(key);
+                        const currentTime = audioContext.currentTime;
+                        
+                        // Cancel any existing automation
+                        param.cancelScheduledValues(currentTime);
+                        
+                        // Set current slider value as starting point
+                        param.setValueAtTime(startParamValue, currentTime);
+                        
+                        // Smooth 3-second ramp to target value
+                        param.linearRampToValueAtTime(targetParamValue, currentTime + 3.0);
+                    }
+                    
+                    // Animate slider and display to follow the ramp
+                    function animateSlider() {
+                        const elapsed = Date.now() - startTime;
+                        const progress = Math.min(elapsed / rampDuration, 1.0);
+                        
+                        // Smooth interpolation
+                        const currentValue = startValue + (targetValue - startValue) * progress;
+                        
+                        slider.value = currentValue;
+                        
+                        // Update display with proper formatting
+                        if (key === 'clickDuration') {
+                            valueDisplay.textContent = currentValue.toFixed(1);
+                        } else if (key === 'groupSpacing' || key === 'echemeDuration' || key === 'echemeSpacing') {
+                            valueDisplay.textContent = Math.round(currentValue).toString();
+                        } else if (key === 'echemeRate' || key === 'phraseIntensity') {
+                            valueDisplay.textContent = currentValue.toFixed(1);
+                        } else if (key === 'volume') {
+                            valueDisplay.textContent = currentValue.toFixed(2);
+                        } else {
+                            valueDisplay.textContent = Math.round(currentValue).toString();
+                        }
+                        
+                        // Continue animation until complete
+                        if (progress < 1.0) {
+                            requestAnimationFrame(animateSlider);
+                        }
+                    }
+                    
+                    // Start the animation
+                    requestAnimationFrame(animateSlider);
+                }
+            });
+        }
+
+        // Preset buttons
+        document.getElementById('presetGreengrocer').addEventListener('click', () => {
+            applyPreset({
+                clickRate: 180,
+                clickDuration: 4,
+                clickJitter: 0.05,
+                noiseAmount: 0.3,
+                resonantFreq: 400,
+                resonantQ: 6,
+                harmonicFreq: 1200,
+                harmonicQ: 4,
+                pulseGroupSize: 8,
+                subGroupSize: 4,
+                groupSpacing: 15,
+                echemeRate: 0,
+                echemeDuration: 1000,
+                echemeSpacing: 100,
+                phraseIntensity: 1.0,
+                volume: 0.2
+            });
+        });
+
+        document.getElementById('presetDoubleDrummer').addEventListener('click', () => {
+            applyPreset({
+                clickRate: 350,
+                clickDuration: 2,
+                clickJitter: 0.15,
+                noiseAmount: 0.8,
+                resonantFreq: 350,
+                resonantQ: 12,
+                harmonicFreq: 1050,
+                harmonicQ: 8,
+                pulseGroupSize: 8,
+                subGroupSize: 3,
+                groupSpacing: 30,
+                echemeRate: 8,
+                echemeDuration: 150,
+                echemeSpacing: 75,
+                phraseIntensity: 1.5,
+                volume: 0.4
+            });
+        });
+
+        document.getElementById('presetTypewriter').addEventListener('click', () => {
+            applyPreset({
+                clickRate: 600,
+                clickDuration: 1.5,
+                clickJitter: 0.2,
+                noiseAmount: 0.9,
+                resonantFreq: 1200,
+                resonantQ: 3,
+                harmonicFreq: 2400,
+                harmonicQ: 2,
+                pulseGroupSize: 4,
+                subGroupSize: 2,
+                groupSpacing: 40,
+                echemeRate: 15,
+                echemeDuration: 80,
+                echemeSpacing: 60,
+                phraseIntensity: 0.8,
+                volume: 0.15
+            });
+        });
+
+        document.getElementById('presetRedeye').addEventListener('click', () => {
+            applyPreset({
+                clickRate: 250,
+                clickDuration: 3,
+                clickJitter: 0.1,
+                noiseAmount: 0.5,
+                resonantFreq: 800,
+                resonantQ: 8,
+                harmonicFreq: 1600,
+                harmonicQ: 5,
+                pulseGroupSize: 6,
+                subGroupSize: 3,
+                groupSpacing: 25,
+                echemeRate: 2,
+                echemeDuration: 400,
+                echemeSpacing: 300,
+                phraseIntensity: 1.2,
+                volume: 0.25
+            });
+        });
+
+        // Initialize sliders to match AudioWorklet parameter defaults
+        function initializeSliders() {
+            const defaults = {
+                clickRate: 200,
+                clickDuration: 3,  // in ms for display
+                clickJitter: 0.1,
+                noiseAmount: 0.7,
+                resonantFreq: 800,
+                resonantQ: 8,
+                harmonicFreq: 1600,
+                harmonicQ: 5,
+                pulseGroupSize: 6,
+                subGroupSize: 3,
+                groupSpacing: 20,  // in ms for display
+                echemeRate: 2.0,
+                echemeDuration: 300,  // in ms for display
+                echemeSpacing: 200,  // in ms for display
+                phraseIntensity: 1.0,
+                volume: 0.3
+            };
+            
+            Object.entries(defaults).forEach(([key, value]) => {
+                const slider = document.getElementById(key);
+                const valueDisplay = document.getElementById(key + 'Value');
+                
+                if (slider && valueDisplay) {
+                    slider.value = value;
+                    
+                    // Update display with proper formatting
+                    if (key === 'clickDuration') {
+                        valueDisplay.textContent = value.toFixed(1);
+                    } else if (key === 'groupSpacing' || key === 'echemeDuration' || key === 'echemeSpacing') {
+                        valueDisplay.textContent = Math.round(value).toString();
+                    } else if (key === 'echemeRate' || key === 'phraseIntensity') {
+                        valueDisplay.textContent = value.toFixed(1);
+                    } else if (key === 'volume') {
+                        valueDisplay.textContent = value.toFixed(2);
+                    } else {
+                        valueDisplay.textContent = Math.round(value).toString();
+                    }
+                }
+            });
+        }
+
+        // Initialize sliders on page load
+        initializeSliders();
+
+        // Event listeners
+        startBtn.addEventListener('click', startAudio);
+        stopBtn.addEventListener('click', stopAudio);
+    </script>
+</body>
+</html>

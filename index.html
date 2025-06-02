@@ -77,6 +77,36 @@
             opacity: 0.3;
             transition: opacity 0.3s;
         }
+        #calibration_phase {
+            background: #2a2a2a;
+            border-radius: 4px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        #join_instrument {
+            background: #4a8;
+            margin: 20px auto;
+            padding: 15px 30px;
+            font-size: 16px;
+            display: none;
+        }
+        #join_instrument:hover {
+            background: #5b9;
+        }
+        #audio_verification {
+            margin: 15px 0;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .verification_good {
+            color: #4a8;
+        }
+        .verification_warning {
+            color: #fa4;
+        }
     </style>
 </head>
 <body>
@@ -92,23 +122,46 @@
     <div id="audio_hint">Click to enable audio engine</div>
     <button id="start_audio">Start Audio</button>
     
+    <div id="calibration_phase" style="display: none;">
+        <h3>Audio Calibration</h3>
+        <p>Adjust your device volume while listening to the pink noise test signal.</p>
+        <div id="audio_verification">
+            <div id="audio_status">🔊 Audio output detected</div>
+        </div>
+        <button id="join_instrument">Join Cicada Instrument</button>
+    </div>
+    
+
+    
     <canvas id="visualizer" class="dimmed"></canvas>
     
     <div id="params" class="dimmed">
-        <div class="param">Volume: <span id="volume_display">0.2</span></div>
+        <div class="param">Audio Status</div>
     </div>
 
-    <script>
+    <script type="module">
+        import { PARAM_DEFINITIONS, ParameterManager } from './parameter_definitions.js';
+        import { StochasticDistributor } from './stochastic_distributor.js';
+        
         const synth_id = `synth-${Math.random ().toString (36).substr (2, 9)}`
         let ws = null
         let audio_context = null
         let pink_noise = null
+        let cicada_node = null
+        let cicada_gain = null
+        let mixer_node = null
         let gain_node = null
         let analyser = null
         let wake_lock = null
         const controllers = new Map ()
-        let stored_volume = 0.2  // store volume separately from gain
+        let cicada_amplitude = 0.0  // store cicada amplitude
         let is_powered_on = true  // track power state
+        let instrument_joined = false  // track if user has joined the instrument
+        let stochasticDistributor = null  // client-side stochastic parameter resolver
+        
+        // store cicada parameters for later application
+        let pending_cicada_params = {}
+        let pending_initial_state = null  // store initial state if audio not ready
         
         // webrtc configuration
         let rtc_config = {
@@ -130,9 +183,13 @@
         // ui elements
         const status_el = document.getElementById ("status")
         const start_button = document.getElementById ("start_audio")
-        const volume_display = document.getElementById ("volume_display")
+
         const canvas = document.getElementById ("visualizer")
         const ctx = canvas.getContext ("2d")
+        const join_button = document.getElementById ("join_instrument")
+        const calibration_phase = document.getElementById ("calibration_phase")
+        const audio_status = document.getElementById ("audio_status")
+
         
         // set canvas size
         canvas.width = canvas.offsetWidth
@@ -280,17 +337,12 @@
             controller.connection = pc
             controller.ice_queue = []
             
-            // create data channels
-            const param_channel = pc.createDataChannel ("params", {
-                ordered: false,
-                maxRetransmits: 0
-            })
-            const command_channel = pc.createDataChannel ("commands", {
+            // create single data channel
+            const main_channel = pc.createDataChannel ("main", {
                 ordered: true
             })
             
-            controller.channel = param_channel
-            controller.command_channel = command_channel
+            controller.channel = main_channel
             
             // handle ice candidates
             pc.addEventListener ("icecandidate", (event) => {
@@ -307,39 +359,72 @@
                 }
             })
             
-            // set up param channel handlers
-            param_channel.addEventListener ("open", () => {
-                console.log (`param channel open to ${controller_id}`)
+            // set up main channel handlers
+            main_channel.addEventListener ("open", () => {
+                console.log (`main channel open to ${controller_id}`)
                 controller.connected = true
                 update_controller_list ()
                 
                 // send immediate state update (like a pong without a ping)
-                param_channel.send (JSON.stringify ({
+                main_channel.send (JSON.stringify ({
                     type: "pong",
                     timestamp: Date.now (),
                     state: {
                         audio_enabled: !!audio_context,
-                        volume: stored_volume,
-                        powered_on: is_powered_on
+                        volume: cicada_amplitude,
+                        powered_on: is_powered_on,
+                        instrument_joined: instrument_joined,
+                        ready_for_params: true
                     }
                 }))
             })
             
-            param_channel.addEventListener ("message", (event) => {
-                handle_data_message (JSON.parse (event.data))
-            })
-            
-            param_channel.addEventListener ("close", () => {
-                console.log (`param channel closed to ${controller_id}`)
-                controller.connected = false
-                update_controller_list ()
-            })
-            
-            // set up command channel handlers
-            command_channel.addEventListener ("message", (event) => {
-                const command = JSON.parse (event.data)
-                if (command.type === "command") {
-                    handle_command (command)
+            main_channel.addEventListener ("message", (event) => {
+                const data = JSON.parse (event.data)
+                if (data.type === "param") {
+                    handle_data_message (data)
+                } else if (data.type === "command") {
+                    handle_command (data)
+                } else if (data.type === "discrete_param") {
+                    handle_discrete_param (data)
+                } else if (data.type === "initial_state") {
+                    handle_initial_state (data)
+                } else if (data.type === "request_initial_state") {
+                    // Handle request for initial state (this shouldn't happen on synth side)
+                    console.log("Received request_initial_state on synth side - ignoring")
+                } else if (data.type === "regenerate_ratios") {
+                    handle_regenerate_ratios(data)
+                } else if (data.type === "ping") {
+                    // Handle ping messages
+                    for (const [ctrl_id, ctrl] of controllers) {
+                        if (ctrl.channel && ctrl.channel.readyState === "open") {
+                            ctrl.channel.send (JSON.stringify ({
+                                type: "pong",
+                                timestamp: data.timestamp,
+                                state: {
+                                    audio_enabled: !!audio_context,
+                                    powered_on: is_powered_on,
+                                    instrument_joined: instrument_joined,
+                                    cicada_params: cicada_node ? {
+                                        clickRate: cicada_node.parameters.get("clickRate").value,
+                                        clickDuration: cicada_node.parameters.get("clickDuration").value,
+                                        clickJitter: cicada_node.parameters.get("clickJitter").value,
+                                        noiseAmount: cicada_node.parameters.get("noiseAmount").value,
+                                        resonantFreq: cicada_node.parameters.get("resonantFreq").value,
+                                        resonantQ: cicada_node.parameters.get("resonantQ").value,
+                                        harmonicFreq: cicada_node.parameters.get("harmonicFreq").value,
+                                        harmonicQ: cicada_node.parameters.get("harmonicQ").value,
+                                        echemeRate: cicada_node.parameters.get("echemeRate").value,
+                                        echemeDuration: cicada_node.parameters.get("echemeDuration").value,
+                                        echemeSpacing: cicada_node.parameters.get("echemeSpacing").value,
+                                        phraseIntensity: cicada_node.parameters.get("phraseIntensity").value,
+                                        amplitude: cicada_node.parameters.get("amplitude").value
+                                    } : null
+                                }
+                            }))
+                            break
+                        }
+                    }
                 }
             })
             
@@ -370,28 +455,41 @@
         async function init_audio () {
             audio_context = new (window.AudioContext || window.webkitAudioContext) ()
             
-            // load audio worklet
+            // load audio worklets
             await audio_context.audioWorklet.addModule ("pink_noise.js")
+            await audio_context.audioWorklet.addModule ("cicada_processor.js")
             
             // create nodes
             pink_noise = new AudioWorkletNode (audio_context, "ridge-rat-type2-pink-noise-generator")
+            cicada_node = new AudioWorkletNode (audio_context, "cicada-processor")
+            cicada_gain = audio_context.createGain ()
+            mixer_node = audio_context.createGain ()
             gain_node = audio_context.createGain ()
             analyser = audio_context.createAnalyser ()
             
-            // connect nodes
-            pink_noise.connect (gain_node)
+            // connect nodes (pink noise independent of controller state)
+            pink_noise.connect (analyser)
+            cicada_node.connect (cicada_gain)
+            cicada_gain.connect (mixer_node)
+            mixer_node.connect (gain_node)
             gain_node.connect (analyser)
             analyser.connect (audio_context.destination)
             
-            // set initial volume based on power state
-            gain_node.gain.value = is_powered_on ? stored_volume : 0
+            // set initial volume based on power state (only affects cicada)
+            gain_node.gain.value = is_powered_on ? 1.0 : 0
             
-            // set pink noise amplitude
-            pink_noise.parameters.get ("amplitude").value = 0.2
+            // set initial amplitudes (pink noise independent, cicada controlled)
+            pink_noise.parameters.get ("amplitude").value = 0.2  // fixed level for calibration
+            cicada_node.parameters.get ("amplitude").value = 1.0  // ready to go, controlled by cicada_gain
+            cicada_gain.gain.value = 0.0  // silent until join
             
             start_button.textContent = "Audio Running"
             start_button.disabled = true
             document.getElementById ("audio_hint").style.display = "none"
+            
+            // show calibration phase
+            calibration_phase.style.display = "block"
+            join_button.style.display = "block"
             
             // remove dimmed state from UI elements
             document.getElementById ("visualizer").classList.remove ("dimmed")
@@ -402,9 +500,12 @@
             
             // request wake lock to prevent device sleep
             request_wake_lock ()
+            
+            // request initial parameters from connected controllers
+            requestInitialParameters()
         }
         
-        // visualizer
+        // visualizer with audio verification
         function draw_visualizer () {
             requestAnimationFrame (draw_visualizer)
             
@@ -414,6 +515,25 @@
             const data_array = new Uint8Array (buffer_length)
             analyser.getByteFrequencyData (data_array)
             
+            // simple audio verification
+            if (!instrument_joined) {
+                let max_amplitude = 0
+                for (let i = 0; i < buffer_length; i++) {
+                    if (data_array[i] > max_amplitude) {
+                        max_amplitude = data_array[i]
+                    }
+                }
+                
+                if (max_amplitude > 20) {
+                    audio_status.textContent = "🔊 Audio output detected"
+                    audio_status.className = "verification_good"
+                } else {
+                    audio_status.textContent = "⚠️ Weak or no audio detected"
+                    audio_status.className = "verification_warning"
+                }
+            }
+            
+            // draw spectrum
             ctx.fillStyle = "rgb(0, 0, 0)"
             ctx.fillRect (0, 0, canvas.width, canvas.height)
             
@@ -434,43 +554,43 @@
         
         // handle data messages from controllers
         function handle_data_message (data) {
-            if (data.type === "param") {
-                console.log (`param ${data.name} = ${data.value}`)
-                if (data.name === "volume") {
-                    stored_volume = data.value
-                    volume_display.textContent = data.value.toFixed (2)
-                    if (gain_node && is_powered_on) {
-                        gain_node.gain.value = data.value
-                    }
+            console.log (`param ${data.name} = ${data.value}`)
+            if (cicada_node && audio_context) {
+                console.log("DEBUG: Applying parameter update:", data.name, "value:", data.value);
+                // Apply stochastic resolution if needed
+                let finalValue = data.value;
+                if (stochasticDistributor && PARAM_DEFINITIONS[data.name]?.stochastic) {
+                    // For stochastic parameters, the controller sends base values
+                    // and we apply our client-specific stochastic resolution
+                    finalValue = stochasticDistributor.resolveParameter(
+                        data.name, 
+                        data.value, 
+                        stochasticDistributor.stochasticConfig
+                    );
+                    console.log("DEBUG: Stochastic resolution:", data.name, "base:", data.value, "final:", finalValue);
                 }
-            } else if (data.type === "ping") {
-                // find the controller that sent this ping
-                for (const [ctrl_id, ctrl] of controllers) {
-                    if (ctrl.channel && ctrl.channel.readyState === "open") {
-                        ctrl.channel.send (JSON.stringify ({
-                            type: "pong",
-                            timestamp: data.timestamp,
-                            state: {
-                                audio_enabled: !!audio_context,
-                                volume: stored_volume,
-                                powered_on: is_powered_on
-                            }
-                        }))
-                        break
-                    }
+                
+                // Generic parameter application using parameter definitions
+                const param = cicada_node.parameters.get(data.name);
+                if (param) {
+                    param.linearRampToValueAtTime(finalValue, audio_context.currentTime + 0.05);
+                } else {
+                    console.warn(`Unknown parameter: ${data.name}`);
                 }
             }
         }
         
         // handle command updates
         function handle_command (command) {
-            console.log (`command ${command.name} = ${command.value}`)
-            if (command.name === "power") {
+            console.log (`command type: ${command.type}, name: ${command.name}, value: ${command.value}`)
+            if (command.type === "discrete_param") {
+                handle_discrete_param(command)
+            } else if (command.name === "power") {
                 is_powered_on = command.value
                 if (gain_node) {
                     if (command.value) {
-                        // power on - restore stored volume
-                        gain_node.gain.value = stored_volume
+                        // power on - restore volume
+                        gain_node.gain.value = 1.0
                     } else {
                         // power off - mute
                         gain_node.gain.value = 0
@@ -478,6 +598,139 @@
                 }
             }
         }
+        
+        // handle discrete parameter messages (TCP-like)
+        function handle_discrete_param (data) {
+            console.log (`discrete param ${data.name} = ${data.value}`)
+            if (cicada_node) {
+                // Send to AudioWorklet via message port
+                cicada_node.port.postMessage({
+                    type: "discrete_param",
+                    name: data.name,
+                    value: data.value
+                })
+            }
+        }
+        
+        // request initial parameters from all connected controllers
+        function requestInitialParameters() {
+            console.log("Audio ready - requesting initial parameters from controllers");
+            
+            controllers.forEach((controller, controllerId) => {
+                if (controller.channel && controller.channel.readyState === "open") {
+                    controller.channel.send(JSON.stringify({
+                        type: "request_initial_state",
+                        synth_id: synth_id
+                    }));
+                    console.log(`Requested initial state from ${controllerId}`);
+                }
+            });
+        }
+        
+        // handle regenerate ratios command
+        function handle_regenerate_ratios(data) {
+            console.log("Received regenerate ratios command");
+            
+            if (!stochasticDistributor) {
+                console.log("No stochastic distributor available");
+                return;
+            }
+            
+            // Clear existing ratios
+            stochasticDistributor.clearRatios();
+            
+            // Update stochastic config if provided
+            if (data.stochastic_config) {
+                stochasticDistributor.stochasticConfig = data.stochastic_config;
+                console.log("Updated stochastic config");
+            }
+            
+            // Re-resolve and apply all stochastic parameters if audio is ready
+            if (cicada_node && audio_context && stochasticDistributor.stochasticConfig) {
+                console.log("Re-applying stochastic parameters with new ratios");
+                
+                // Get current base values and re-resolve with new ratios
+                Object.keys(PARAM_DEFINITIONS).forEach(paramName => {
+                    if (PARAM_DEFINITIONS[paramName].stochastic) {
+                        const param = cicada_node.parameters.get(paramName);
+                        if (param && stochasticDistributor.stochasticConfig[paramName]) {
+                            const config = stochasticDistributor.stochasticConfig[paramName];
+                            const newValue = stochasticDistributor.resolveParameter(
+                                paramName, 
+                                config.base, 
+                                stochasticDistributor.stochasticConfig
+                            );
+                            param.setValueAtTime(newValue, audio_context.currentTime);
+                            console.log(`Re-applied ${paramName}: ${config.base} → ${newValue}`);
+                        }
+                    }
+                });
+            }
+        }
+        
+        // handle initial state message (TCP-like)
+        function handle_initial_state (data) {
+            console.log (`received initial state for client ${data.client_id}`)
+            console.log (`stochastic enabled: ${data.stochastic_enabled}`)
+            console.log("DEBUG: Received base_params:", data.base_params);
+            console.log("DEBUG: Received stochastic_config:", data.stochastic_config);
+            
+            if (!audio_context || !cicada_node) {
+                console.log ("audio not ready for initial state")
+                return
+            }
+            
+            // Initialize stochastic distributor for this client
+            stochasticDistributor = StochasticDistributor.createForClient(data.client_id);
+            stochasticDistributor.setEnabled(data.stochastic_enabled);
+            if (data.stochastic_config) {
+                stochasticDistributor.stochasticConfig = data.stochastic_config;
+            }
+            
+            // Resolve all parameters with stochastic ratios
+            const resolvedParams = stochasticDistributor.resolveAllParameters(
+                data.base_params, 
+                data.stochastic_config
+            );
+            
+            console.log (`resolved ${Object.keys(resolvedParams).length} parameters`);
+            console.log("DEBUG: Resolved parameters:", resolvedParams);
+            
+            // Apply power state
+            if (resolvedParams.powered_on !== undefined) {
+                is_powered_on = resolvedParams.powered_on
+                if (gain_node) {
+                    gain_node.gain.value = is_powered_on ? 1.0 : 0
+                }
+            }
+            
+            // Apply discrete parameters using parameter definitions
+            Object.keys(PARAM_DEFINITIONS).filter(name => 
+                PARAM_DEFINITIONS[name].type === 'discrete'
+            ).forEach(paramName => {
+                if (resolvedParams[paramName] !== undefined) {
+                    cicada_node.port.postMessage({
+                        type: "discrete_param",
+                        name: paramName,
+                        value: resolvedParams[paramName]
+                    });
+                }
+            });
+            
+            // Apply continuous parameters using parameter definitions
+            Object.keys(PARAM_DEFINITIONS).filter(name => 
+                PARAM_DEFINITIONS[name].type === 'continuous'
+            ).forEach(paramName => {
+                if (resolvedParams[paramName] !== undefined) {
+                    const param = cicada_node.parameters.get(paramName);
+                    if (param) {
+                        param.setValueAtTime(resolvedParams[paramName], audio_context.currentTime);
+                    }
+                }
+            });
+        }
+        
+
         
         // update controller list display
         function update_controller_list () {
@@ -518,6 +771,33 @@
         
         // visibility change handler
         document.addEventListener('visibilitychange', handle_visibility_change)
+        
+        // join instrument handler
+        join_button.addEventListener ("click", () => {
+            instrument_joined = true
+            calibration_phase.style.display = "none"
+            
+            // crossfade: pink noise down, cicada up
+            if (pink_noise && cicada_gain && audio_context) {
+                const currentTime = audio_context.currentTime
+                
+                // Ramp pink noise down
+                const pinkParam = pink_noise.parameters.get("amplitude")
+                pinkParam.cancelScheduledValues(currentTime)
+                pinkParam.setValueAtTime(pinkParam.value, currentTime)
+                pinkParam.linearRampToValueAtTime(0, currentTime + 1.0)
+                
+                // Ramp cicada up
+                cicada_gain.gain.cancelScheduledValues(currentTime)
+                cicada_gain.gain.setValueAtTime(0, currentTime)
+                cicada_gain.gain.linearRampToValueAtTime(1.0, currentTime + 1.0)
+            }
+            
+            // update status display
+            status_el.innerHTML = status_el.innerHTML.replace("🔊", "🎵")
+            
+            console.log("Joined cicada instrument - controller has full control")
+        })
         
         // start audio on user gesture
         start_button.addEventListener ("click", init_audio)

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Test</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background: #000; 
+            color: #0f0; 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 10px; 
+            border: 1px solid #0f0; 
+        }
+        .pass { color: #0f0; }
+        .fail { color: #f00; }
+        pre { background: #111; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Cicada Module Test</h1>
+    
+    <div class="test-section">
+        <h2>Parameter Definitions Test</h2>
+        <div id="param-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Stochastic Distributor Test</h2>
+        <div id="stochastic-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Integration Test</h2>
+        <div id="integration-results"></div>
+    </div>
+
+    <script type="module">
+        import { PARAM_DEFINITIONS, ParameterManager } from './parameter_definitions.js';
+        import { StochasticDistributor, StochasticUtils } from './stochastic_distributor.js';
+        
+        function log(element, message, pass = true) {
+            element.innerHTML += `<div class="${pass ? 'pass' : 'fail'}">${message}</div>`;
+        }
+        
+        // Test Parameter Definitions
+        const paramResults = document.getElementById('param-results');
+        
+        try {
+            log(paramResults, `✓ Found ${Object.keys(PARAM_DEFINITIONS).length} parameter definitions`);
+            
+            const stochasticParams = Object.keys(PARAM_DEFINITIONS).filter(
+                name => PARAM_DEFINITIONS[name].stochastic
+            );
+            log(paramResults, `✓ Found ${stochasticParams.length} stochastic parameters: ${stochasticParams.join(', ')}`);
+            
+            const continuousParams = Object.keys(PARAM_DEFINITIONS).filter(
+                name => PARAM_DEFINITIONS[name].type === 'continuous'
+            );
+            log(paramResults, `✓ Found ${continuousParams.length} continuous parameters`);
+            
+            const discreteParams = Object.keys(PARAM_DEFINITIONS).filter(
+                name => PARAM_DEFINITIONS[name].type === 'discrete'
+            );
+            log(paramResults, `✓ Found ${discreteParams.length} discrete parameters`);
+            
+        } catch (e) {
+            log(paramResults, `✗ Parameter test failed: ${e.message}`, false);
+        }
+        
+        // Test Stochastic Distributor
+        const stochasticResults = document.getElementById('stochastic-results');
+        
+        try {
+            const distributor = StochasticDistributor.createForClient('test-client-123');
+            log(stochasticResults, '✓ Created stochastic distributor for client');
+            
+            // Test SIN parsing
+            const parsed1 = distributor.parseSIN('1,3,5,7');
+            log(stochasticResults, `✓ Parsed SIN "1,3,5,7": [${parsed1.join(', ')}]`);
+            
+            const parsed2 = distributor.parseSIN('2-6');
+            log(stochasticResults, `✓ Parsed SIN "2-6": [${parsed2.join(', ')}]`);
+            
+            // Test ratio generation
+            const ratio1 = distributor.generateHarmonicRatio('client1', 'clickRate', '1,3,5', '2,4');
+            const ratio2 = distributor.generateHarmonicRatio('client1', 'clickRate', '1,3,5', '2,4');
+            log(stochasticResults, `✓ Generated consistent ratios: ${ratio1} === ${ratio2}: ${ratio1 === ratio2}`);
+            
+            const ratio3 = distributor.generateHarmonicRatio('client2', 'clickRate', '1,3,5', '2,4');
+            log(stochasticResults, `✓ Different clients get different ratios: ${ratio1} !== ${ratio3}: ${ratio1 !== ratio3}`);
+            
+            // Test parameter resolution
+            distributor.setEnabled(true);
+            const baseValue = 100;
+            const stochasticConfig = {
+                clickRate: { base: baseValue, numSIN: '1,3,5', denSIN: '2,4' }
+            };
+            distributor.stochasticConfig = stochasticConfig;
+            
+            const resolved = distributor.resolveParameter('clickRate', baseValue, stochasticConfig);
+            log(stochasticResults, `✓ Resolved stochastic parameter: ${baseValue} → ${resolved}`);
+            
+            // Test SIN validation
+            const validSIN = StochasticUtils.isValidSIN('1,3,5,7');
+            const invalidSIN = StochasticUtils.isValidSIN('invalid');
+            log(stochasticResults, `✓ SIN validation: "${validSIN}" (valid), "${invalidSIN}" (invalid)`);
+            
+            // Test ratio preview
+            const ratios = StochasticUtils.previewRatios('1,3,5', '2,4');
+            log(stochasticResults, `✓ Preview ratios for "1,3,5" / "2,4": [${ratios.join(', ')}]`);
+            
+        } catch (e) {
+            log(stochasticResults, `✗ Stochastic test failed: ${e.message}`, false);
+        }
+        
+        // Integration Test
+        const integrationResults = document.getElementById('integration-results');
+        
+        try {
+            const baseParams = {
+                clickRate: 200,
+                resonantFreq: 800,
+                harmonicFreq: 1600,
+                clickDuration: 0.003,
+                amplitude: 0.5
+            };
+            
+            const stochasticConfig = {
+                clickRate: { base: 200, numSIN: '1,3,5', denSIN: '2' },
+                resonantFreq: { base: 800, numSIN: '1,2,3', denSIN: '1' },
+                harmonicFreq: { base: 1600, numSIN: '1,2', denSIN: '1' }
+            };
+            
+            const distributor = StochasticDistributor.createForClient('integration-test');
+            distributor.setEnabled(true);
+            distributor.stochasticConfig = stochasticConfig;
+            
+            const resolved = distributor.resolveAllParameters(baseParams, stochasticConfig);
+            
+            log(integrationResults, '✓ Resolved all parameters:');
+            integrationResults.innerHTML += '<pre>' + JSON.stringify(resolved, null, 2) + '</pre>';
+            
+            // Test with disabled stochastic
+            distributor.setEnabled(false);
+            const resolvedDisabled = distributor.resolveAllParameters(baseParams, stochasticConfig);
+            
+            const unchanged = JSON.stringify(baseParams) === JSON.stringify(resolvedDisabled);
+            log(integrationResults, `✓ Disabled stochastic returns unchanged params: ${unchanged}`);
+            
+        } catch (e) {
+            log(integrationResults, `✗ Integration test failed: ${e.message}`, false);
+        }
+    </script>
+</body>
+</html>

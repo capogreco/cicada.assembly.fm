@@ -73,14 +73,134 @@
     </div>
     
     <div class="control">
-        <label for="volume">Volume: <span id="volume_value">0.2</span></label>
-        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.2">
-    </div>
-    
-    <div class="control">
         <label>
             <input type="checkbox" id="power" checked> Power On/Off
         </label>
+    </div>
+
+    <h3>Cicada Synthesis</h3>
+    
+    <div class="control">
+        <label>
+            <input type="checkbox" id="harmonic_ratios_enabled" checked> Enable Harmonic Ratio Generator
+        </label>
+        <button id="regenerate_ratios" style="margin-left: 10px;">Regenerate Ratios</button>
+    </div>
+    
+    <h4>Stage 1: Click Generation</h4>
+    
+    <div class="control">
+        <label for="click_rate">Click Rate: <span id="click_rate_value">200</span> Hz</label>
+        <input type="range" id="click_rate" min="50" max="800" step="5" value="200">
+        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+            <div>Base: <input type="number" id="click_rate_base" value="200" style="width: 60px;"></div>
+            <div>Num: <input type="text" id="click_rate_num_sin" value="1-4" style="width: 60px;"></div>
+            <div>Den: <input type="text" id="click_rate_den_sin" value="1-2" style="width: 60px;"></div>
+        </div>
+    </div>
+    
+    <div class="control">
+        <label for="click_duration">Click Duration: <span id="click_duration_value">3.0</span> ms</label>
+        <input type="range" id="click_duration" min="1" max="10" step="0.5" value="3.0">
+    </div>
+    
+    <div class="control">
+        <label for="click_jitter">Timing Jitter: <span id="click_jitter_value">0.1</span></label>
+        <input type="range" id="click_jitter" min="0" max="0.3" step="0.01" value="0.1">
+    </div>
+    
+    <div class="control">
+        <label for="noise_amount">Noise Amount: <span id="noise_amount_value">0.7</span></label>
+        <input type="range" id="noise_amount" min="0" max="1" step="0.01" value="0.7">
+    </div>
+    
+    <h4>Stage 2: Resonant Filtering</h4>
+    
+    <div class="control">
+        <label for="resonant_freq">Primary Resonance: <span id="resonant_freq_value">800</span> Hz</label>
+        <input type="range" id="resonant_freq" min="200" max="3000" step="10" value="800">
+        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+            <div>Base: <input type="number" id="resonant_freq_base" value="800" style="width: 60px;"></div>
+            <div>Num: <input type="text" id="resonant_freq_num_sin" value="1-8" style="width: 60px;"></div>
+            <div>Den: <input type="text" id="resonant_freq_den_sin" value="1-4" style="width: 60px;"></div>
+        </div>
+    </div>
+    
+    <div class="control">
+        <label for="resonant_q">Resonance Q: <span id="resonant_q_value">8</span></label>
+        <input type="range" id="resonant_q" min="1" max="30" step="0.5" value="8">
+    </div>
+    
+    <div class="control">
+        <label for="harmonic_freq">Harmonic Resonance: <span id="harmonic_freq_value">1600</span> Hz</label>
+        <input type="range" id="harmonic_freq" min="400" max="6000" step="10" value="1600">
+        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+            <div>Base: <input type="number" id="harmonic_freq_base" value="1600" style="width: 60px;"></div>
+            <div>Num: <input type="text" id="harmonic_freq_num_sin" value="1-8" style="width: 60px;"></div>
+            <div>Den: <input type="text" id="harmonic_freq_den_sin" value="1-4" style="width: 60px;"></div>
+        </div>
+    </div>
+    
+    <div class="control">
+        <label for="harmonic_q">Harmonic Q: <span id="harmonic_q_value">5</span></label>
+        <input type="range" id="harmonic_q" min="1" max="20" step="0.5" value="5">
+    </div>
+    
+    <h4>Rhythmic Structure</h4>
+    
+    <div class="control">
+        <label for="pulse_group_size">Pulse Group Size: <span id="pulse_group_size_value">6</span></label>
+        <input type="range" id="pulse_group_size" min="2" max="12" step="1" value="6">
+    </div>
+    
+    <div class="control">
+        <label for="sub_group_size">Sub-Group Size: <span id="sub_group_size_value">3</span></label>
+        <input type="range" id="sub_group_size" min="2" max="6" step="1" value="3">
+    </div>
+    
+    <div class="control">
+        <label for="group_spacing">Group Spacing: <span id="group_spacing_value">20</span> ms</label>
+        <input type="range" id="group_spacing" min="5" max="100" step="1" value="20">
+    </div>
+    
+    <div class="control">
+        <label for="echeme_rate">Echeme Rate: <span id="echeme_rate_value">2.0</span> Hz</label>
+        <input type="range" id="echeme_rate" min="0" max="10" step="0.1" value="2.0">
+        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+            <div>Base: <input type="number" id="echeme_rate_base" value="2.0" step="0.1" style="width: 60px;"></div>
+            <div>Num: <input type="text" id="echeme_rate_num_sin" value="2-6" style="width: 60px;"></div>
+            <div>Den: <input type="text" id="echeme_rate_den_sin" value="2-4" style="width: 60px;"></div>
+        </div>
+    </div>
+    
+    <div class="control">
+        <label for="echeme_duration">Echeme Duration: <span id="echeme_duration_value">300</span> ms</label>
+        <input type="range" id="echeme_duration" min="50" max="2000" step="10" value="300">
+    </div>
+    
+    <div class="control">
+        <label for="echeme_spacing">Echeme Spacing: <span id="echeme_spacing_value">200</span> ms</label>
+        <input type="range" id="echeme_spacing" min="50" max="1000" step="10" value="200">
+    </div>
+    
+    <div class="control">
+        <label for="phrase_intensity">Phrase Intensity: <span id="phrase_intensity_value">1.0</span></label>
+        <input type="range" id="phrase_intensity" min="0.1" max="2.0" step="0.1" value="1.0">
+    </div>
+    
+    <div class="control">
+        <label for="cicada_amplitude">Cicada Volume: <span id="cicada_amplitude_value">0.0</span></label>
+        <input type="range" id="cicada_amplitude" min="0" max="1" step="0.01" value="0.0">
+    </div>
+
+    <h3>Australian Species Presets</h3>
+    
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
+        <button id="preset_greengrocer" style="padding: 8px 12px;">Greengrocer</button>
+        <button id="preset_double_drummer" style="padding: 8px 12px;">Double Drummer</button>
+        <button id="preset_typewriter" style="padding: 8px 12px;">Typewriter</button>
+        <button id="preset_redeye" style="padding: 8px 12px;">Redeye</button>
+        <button id="preset_cherry_nose" style="padding: 8px 12px;">Cherry Nose</button>
     </div>
     
     <div id="synths">
@@ -88,7 +208,10 @@
         <div id="synth_list">None connected</div>
     </div>
 
-    <script>
+    <script type="module">
+        import { PARAM_DEFINITIONS, ParameterManager } from './parameter_definitions.js';
+        import { StochasticDistributor } from './stochastic_distributor.js';
+        
         const controller_id = `ctrl-${Math.random ().toString (36).substr (2, 9)}`
         const peers = new Map ()
         const other_controllers = new Set ()
@@ -115,9 +238,53 @@
         
         // ui elements
         const status_el = document.getElementById ("status")
-        const volume_el = document.getElementById ("volume")
-        const volume_value_el = document.getElementById ("volume_value")
         const synth_list_el = document.getElementById ("synth_list")
+        
+        // harmonic ratio generator
+        const harmonic_ratios_enabled_el = document.getElementById ("harmonic_ratios_enabled")
+        
+
+        
+        // dual-stage cicada synthesis controls
+        const click_rate_el = document.getElementById ("click_rate")
+        const click_rate_value_el = document.getElementById ("click_rate_value")
+        const click_duration_el = document.getElementById ("click_duration")
+        const click_duration_value_el = document.getElementById ("click_duration_value")
+        const click_jitter_el = document.getElementById ("click_jitter")
+        const click_jitter_value_el = document.getElementById ("click_jitter_value")
+        const noise_amount_el = document.getElementById ("noise_amount")
+        const noise_amount_value_el = document.getElementById ("noise_amount_value")
+        const resonant_freq_el = document.getElementById ("resonant_freq")
+        const resonant_freq_value_el = document.getElementById ("resonant_freq_value")
+        const resonant_q_el = document.getElementById ("resonant_q")
+        const resonant_q_value_el = document.getElementById ("resonant_q_value")
+        const harmonic_freq_el = document.getElementById ("harmonic_freq")
+        const harmonic_freq_value_el = document.getElementById ("harmonic_freq_value")
+        const harmonic_q_el = document.getElementById ("harmonic_q")
+        const harmonic_q_value_el = document.getElementById ("harmonic_q_value")
+        const pulse_group_size_el = document.getElementById ("pulse_group_size")
+        const pulse_group_size_value_el = document.getElementById ("pulse_group_size_value")
+        const sub_group_size_el = document.getElementById ("sub_group_size")
+        const sub_group_size_value_el = document.getElementById ("sub_group_size_value")
+        const group_spacing_el = document.getElementById ("group_spacing")
+        const group_spacing_value_el = document.getElementById ("group_spacing_value")
+        const echeme_rate_el = document.getElementById ("echeme_rate")
+        const echeme_rate_value_el = document.getElementById ("echeme_rate_value")
+        const echeme_duration_el = document.getElementById ("echeme_duration")
+        const echeme_duration_value_el = document.getElementById ("echeme_duration_value")
+        const echeme_spacing_el = document.getElementById ("echeme_spacing")
+        const echeme_spacing_value_el = document.getElementById ("echeme_spacing_value")
+        const phrase_intensity_el = document.getElementById ("phrase_intensity")
+        const phrase_intensity_value_el = document.getElementById ("phrase_intensity_value")
+        const cicada_amplitude_el = document.getElementById ("cicada_amplitude")
+        const cicada_amplitude_value_el = document.getElementById ("cicada_amplitude_value")
+        
+        // species preset buttons
+        const preset_greengrocer_btn = document.getElementById ("preset_greengrocer")
+        const preset_double_drummer_btn = document.getElementById ("preset_double_drummer")
+        const preset_typewriter_btn = document.getElementById ("preset_typewriter")
+        const preset_redeye_btn = document.getElementById ("preset_redeye")
+        const preset_cherry_nose_btn = document.getElementById ("preset_cherry_nose")
         
         // connect to websocket
         function connect_websocket () {
@@ -235,19 +402,7 @@
             }
         }
         
-        // send current volume to all connected synths
-        function send_volume () {
-            const value = parseFloat (volume_el.value)
-            peers.forEach ((peer, id) => {
-                if (peer.param_channel && peer.param_channel.readyState === "open") {
-                    peer.param_channel.send (JSON.stringify ({
-                        type: "param",
-                        name: "volume",
-                        value: value
-                    }))
-                }
-            })
-        }
+
         
         // send touch data (placeholder for now - no touch handling implemented yet)
         function send_touch_data () {
@@ -264,8 +419,7 @@
             // store peer info
             const peer = {
                 connection: pc,
-                param_channel: null,
-                command_channel: null,
+                channel: null,
                 ice_queue: [],
                 latency: null,
                 ping_interval: null,
@@ -292,16 +446,16 @@
                 }
             })
             
-            // handle data channels from synth
+            // handle data channels from synth (single channel approach)
             pc.addEventListener ("datachannel", (event) => {
                 const channel = event.channel
                 console.log (`received data channel: ${channel.label}`)
                 
-                if (channel.label === "params") {
-                    peer.param_channel = channel
+                if (channel.label === "main") {
+                    peer.channel = channel
                     
                     channel.addEventListener ("open", () => {
-                        console.log (`param channel open to ${message.source}`)
+                        console.log (`main channel open to ${message.source}`)
                         update_synth_list (message.source, "connected")
                         
                         // start ping interval
@@ -314,11 +468,8 @@
                             }
                         }, 1000)
                         
-                        // send initial parameters
-                        send_touch_data ()
-                        send_volume ()
-                        
-                        // send power state via command channel when it opens
+                        // Initial state will be sent when synth requests it after audio initialization
+                        console.log(`WebRTC connection ready to ${message.source} - waiting for parameter request`)
                     })
                     
                     channel.addEventListener ("message", (event) => {
@@ -331,6 +482,9 @@
                                 peer.state = data.state
                             }
                             update_synth_list (message.source, pc.connectionState)
+                        } else if (data.type === "request_initial_state") {
+                            console.log(`Received initial state request from ${data.synth_id}`)
+                            sendInitialStateToSynth(peer, data.synth_id)
                         }
                     })
                     
@@ -339,20 +493,6 @@
                             clearInterval (peer.ping_interval)
                             peer.ping_interval = null
                         }
-                    })
-                    
-                } else if (channel.label === "commands") {
-                    peer.command_channel = channel
-                    
-                    channel.addEventListener ("open", () => {
-                        console.log (`command channel open to ${message.source}`)
-                        // send current power state
-                        const is_on = power_el.checked
-                        channel.send (JSON.stringify ({
-                            type: "command",
-                            name: "power",
-                            value: is_on
-                        }))
                     })
                 }
             })
@@ -478,13 +618,7 @@
             // handle param channel (UDP-like)
             param_channel.addEventListener ("open", () => {
                 console.log (`param channel open to ${synth_id}`)
-                // send current volume
-                const value = parseFloat (volume_el.value)
-                param_channel.send (JSON.stringify ({
-                    type: "param",
-                    name: "volume",
-                    value: value
-                }))
+            })
                 
                 // start latency monitoring
                 const peer = peers.get (synth_id)
@@ -595,22 +729,7 @@
             }
         }
         
-        // volume control
-        volume_el.addEventListener ("input", (e) => {
-            const value = parseFloat (e.target.value)
-            volume_value_el.textContent = value.toFixed (2)
-            
-            // send to all connected peers via param channel (UDP-like)
-            peers.forEach ((peer, id) => {
-                if (peer.param_channel && peer.param_channel.readyState === "open") {
-                    peer.param_channel.send (JSON.stringify ({
-                        type: "param",
-                        name: "volume",
-                        value: value
-                    }))
-                }
-            })
-        })
+
         
         // power on/off control
         const power_el = document.getElementById ("power")
@@ -629,9 +748,461 @@
             })
         })
         
+        // harmonic ratio generator functions
+        function parseSIN(notation) {
+            if (notation.includes('-')) {
+                const [start, end] = notation.split('-').map(Number);
+                return Array.from({length: end - start + 1}, (_, i) => start + i);
+            } else {
+                return notation.split(',').map(Number);
+            }
+        }
+        
+        function generateHarmonicRatio(numSIN, denSIN) {
+            const numerators = parseSIN(numSIN);
+            const denominators = parseSIN(denSIN);
+            const num = numerators[Math.floor(Math.random() * numerators.length)];
+            const den = denominators[Math.floor(Math.random() * denominators.length)];
+            return num / den;
+        }
+        
+
+        
+
+        
+        function sendInitialStateToSynth(peer, synthId) {
+            if (!peer.channel || peer.channel.readyState !== "open") {
+                console.log("Cannot send initial state - channel not ready");
+                return;
+            }
+            
+            console.log("Sending initial state to new synth");
+            
+            // Get current UI values using parameter manager
+            const baseParams = ParameterManager.getCurrentUIValues();
+            console.log("DEBUG: Base parameters from UI:", baseParams);
+            
+            const stochasticConfig = harmonic_ratios_enabled_el.checked ? 
+                ParameterManager.getStochasticConfig() : null;
+            console.log("DEBUG: Stochastic config:", stochasticConfig);
+            
+            // Send base parameters + stochastic config (let client resolve)
+            const message = {
+                type: "initial_state",
+                client_id: synthId,
+                base_params: baseParams,
+                stochastic_enabled: harmonic_ratios_enabled_el.checked,
+                stochastic_config: stochasticConfig
+            };
+            
+            console.log("DEBUG: Sending message to synth:", message);
+            peer.channel.send(JSON.stringify(message));
+            console.log(`Sent initial state to ${synthId}`);
+        }
+        
+        function regenerateHarmonicRatios() {
+            console.log("Sending regenerate command to all connected synths");
+            
+            // Send regenerate command to all connected synths
+            peers.forEach((peer, synthId) => {
+                if (peer.channel && peer.channel.readyState === "open") {
+                    peer.channel.send(JSON.stringify({
+                        type: "regenerate_ratios",
+                        stochastic_config: harmonic_ratios_enabled_el.checked ? 
+                            ParameterManager.getStochasticConfig() : null
+                    }));
+                }
+            });
+            
+            console.log("Regenerate commands sent to all synths");
+        }
+        
+        // simplified parameter sending via single channel
+        function send_param(name, value, type = "param") {
+            peers.forEach ((peer, id) => {
+                if (peer.channel && peer.channel.readyState === "open") {
+                    peer.channel.send (JSON.stringify ({
+                        type: type,
+                        name: name,
+                        value: value
+                    }))
+                }
+            })
+        }
+        
+        // UDP-like parameters (continuous)
+        click_rate_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            click_rate_value_el.textContent = value
+            document.getElementById("click_rate_base").value = value
+            send_param("clickRate", value)
+        })
+        
+        click_duration_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            click_duration_value_el.textContent = value.toFixed(1)
+            send_param("clickDuration", value * 0.001) // Convert ms to seconds
+        })
+        
+        click_jitter_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            click_jitter_value_el.textContent = value.toFixed(2)
+            send_param("clickJitter", value)
+        })
+        
+        noise_amount_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            noise_amount_value_el.textContent = value.toFixed(2)
+            send_param("noiseAmount", value)
+        })
+        
+        resonant_freq_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            resonant_freq_value_el.textContent = value
+            document.getElementById("resonant_freq_base").value = value
+            send_param("resonantFreq", value)
+        })
+        
+        resonant_q_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            resonant_q_value_el.textContent = value
+            send_param("resonantQ", value)
+        })
+        
+        harmonic_freq_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            harmonic_freq_value_el.textContent = value
+            document.getElementById("harmonic_freq_base").value = value
+            send_param("harmonicFreq", value)
+        })
+        
+        harmonic_q_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            harmonic_q_value_el.textContent = value
+            send_param("harmonicQ", value)
+        })
+        
+        echeme_rate_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            echeme_rate_value_el.textContent = value.toFixed(1)
+            document.getElementById("echeme_rate_base").value = value
+            send_param("echemeRate", value)
+        })
+        
+        echeme_duration_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            echeme_duration_value_el.textContent = value
+            send_param("echemeDuration", value * 0.001) // Convert ms to seconds
+        })
+        
+        echeme_spacing_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            echeme_spacing_value_el.textContent = value
+            send_param("echemeSpacing", value * 0.001) // Convert ms to seconds
+        })
+        
+        phrase_intensity_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            phrase_intensity_value_el.textContent = value.toFixed(1)
+            send_param("phraseIntensity", value)
+        })
+        
+        cicada_amplitude_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            cicada_amplitude_value_el.textContent = value.toFixed (2)
+            send_param("amplitude", value)
+        })
+        
+        // TCP-like parameters (discrete)
+        pulse_group_size_el.addEventListener ("input", (e) => {
+            const value = parseInt (e.target.value)
+            pulse_group_size_value_el.textContent = value
+            send_param("pulseGroupSize", value, "discrete_param")
+        })
+        
+        sub_group_size_el.addEventListener ("input", (e) => {
+            const value = parseInt (e.target.value)
+            sub_group_size_value_el.textContent = value
+            send_param("subGroupSize", value, "discrete_param")
+        })
+        
+        group_spacing_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            group_spacing_value_el.textContent = value
+            send_param("groupSpacing", value * 0.001, "discrete_param") // Convert ms to seconds
+        })
+        
+        // regenerate ratios button
+        document.getElementById("regenerate_ratios").addEventListener("click", regenerateHarmonicRatios)
+        
+        // SIN field change listeners (regenerate on notation changes)
+        document.getElementById("click_rate_num_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("click_rate_den_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("resonant_freq_num_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("resonant_freq_den_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("harmonic_freq_num_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("harmonic_freq_den_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("echeme_rate_num_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("echeme_rate_den_sin").addEventListener("change", regenerateHarmonicRatios)
+
         // initialize UI to default values (override browser memory)
-        volume_el.value = 0.2
-        volume_value_el.textContent = "0.20"
+        power_el.checked = true
+        
+        // initialize dual-stage controls to defaults
+        click_rate_el.value = 200
+        click_rate_value_el.textContent = "200"
+        click_duration_el.value = 3.0
+        click_duration_value_el.textContent = "3.0"
+        click_jitter_el.value = 0.1
+        click_jitter_value_el.textContent = "0.10"
+        noise_amount_el.value = 0.7
+        noise_amount_value_el.textContent = "0.70"
+        resonant_freq_el.value = 800
+        resonant_freq_value_el.textContent = "800"
+        resonant_q_el.value = 8
+        resonant_q_value_el.textContent = "8.0"
+        harmonic_freq_el.value = 1600
+        harmonic_freq_value_el.textContent = "1600"
+        harmonic_q_el.value = 5
+        harmonic_q_value_el.textContent = "5.0"
+        pulse_group_size_el.value = 6
+        pulse_group_size_value_el.textContent = "6"
+        sub_group_size_el.value = 3
+        sub_group_size_value_el.textContent = "3"
+        group_spacing_el.value = 20
+        group_spacing_value_el.textContent = "20"
+        echeme_rate_el.value = 2.0
+        echeme_rate_value_el.textContent = "2.0"
+        echeme_duration_el.value = 300
+        echeme_duration_value_el.textContent = "300"
+        echeme_spacing_el.value = 200
+        echeme_spacing_value_el.textContent = "200"
+        phrase_intensity_el.value = 1.0
+        phrase_intensity_value_el.textContent = "1.0"
+        cicada_amplitude_el.value = 0.0
+        cicada_amplitude_value_el.textContent = "0.00"
+        
+        // species preset functions with controller-side ramping
+        function apply_preset(params) {
+            const rampDuration = 3000; // 3 seconds in milliseconds
+            const startTime = Date.now();
+            const updateInterval = 50; // Send updates every 50ms
+            
+            // Store starting values
+            const startValues = {
+                clickRate: parseFloat(click_rate_el.value),
+                clickDuration: parseFloat(click_duration_el.value),
+                clickJitter: parseFloat(click_jitter_el.value),
+                noiseAmount: parseFloat(noise_amount_el.value),
+                resonantFreq: parseFloat(resonant_freq_el.value),
+                resonantQ: parseFloat(resonant_q_el.value),
+                harmonicFreq: parseFloat(harmonic_freq_el.value),
+                harmonicQ: parseFloat(harmonic_q_el.value),
+                echemeRate: parseFloat(echeme_rate_el.value),
+                echemeDuration: parseFloat(echeme_duration_el.value),
+                echemeSpacing: parseFloat(echeme_spacing_el.value),
+                phraseIntensity: parseFloat(phrase_intensity_el.value),
+                cicadaAmplitude: parseFloat(cicada_amplitude_el.value)
+            };
+            
+            // Send discrete parameters immediately
+            send_param("pulseGroupSize", params.pulseGroupSize, "discrete_param");
+            send_param("subGroupSize", params.subGroupSize, "discrete_param");
+            send_param("groupSpacing", params.groupSpacing * 0.001, "discrete_param");
+            
+            // Update discrete parameter displays
+            pulse_group_size_el.value = params.pulseGroupSize;
+            pulse_group_size_value_el.textContent = params.pulseGroupSize;
+            sub_group_size_el.value = params.subGroupSize;
+            sub_group_size_value_el.textContent = params.subGroupSize;
+            group_spacing_el.value = params.groupSpacing;
+            group_spacing_value_el.textContent = params.groupSpacing;
+            
+            // Regenerate harmonic ratios for species preset
+            regenerateHarmonicRatios();
+            
+            // Start ramping continuous parameters
+            function rampParameters() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / rampDuration, 1.0);
+                
+                // Interpolate each continuous parameter
+                const current = {
+                    clickRate: startValues.clickRate + (params.clickRate - startValues.clickRate) * progress,
+                    clickDuration: startValues.clickDuration + (params.clickDuration - startValues.clickDuration) * progress,
+                    clickJitter: startValues.clickJitter + (params.clickJitter - startValues.clickJitter) * progress,
+                    noiseAmount: startValues.noiseAmount + (params.noiseAmount - startValues.noiseAmount) * progress,
+                    resonantFreq: startValues.resonantFreq + (params.resonantFreq - startValues.resonantFreq) * progress,
+                    resonantQ: startValues.resonantQ + (params.resonantQ - startValues.resonantQ) * progress,
+                    harmonicFreq: startValues.harmonicFreq + (params.harmonicFreq - startValues.harmonicFreq) * progress,
+                    harmonicQ: startValues.harmonicQ + (params.harmonicQ - startValues.harmonicQ) * progress,
+                    echemeRate: startValues.echemeRate + (params.echemeRate - startValues.echemeRate) * progress,
+                    echemeDuration: startValues.echemeDuration + (params.echemeDuration - startValues.echemeDuration) * progress,
+                    echemeSpacing: startValues.echemeSpacing + (params.echemeSpacing - startValues.echemeSpacing) * progress,
+                    phraseIntensity: startValues.phraseIntensity + (params.phraseIntensity - startValues.phraseIntensity) * progress,
+                    cicadaAmplitude: startValues.cicadaAmplitude + (params.cicadaAmplitude - startValues.cicadaAmplitude) * progress
+                };
+                
+                // Update UI
+                click_rate_el.value = current.clickRate;
+                click_rate_value_el.textContent = Math.round(current.clickRate);
+                click_duration_el.value = current.clickDuration;
+                click_duration_value_el.textContent = current.clickDuration.toFixed(1);
+                click_jitter_el.value = current.clickJitter;
+                click_jitter_value_el.textContent = current.clickJitter.toFixed(2);
+                noise_amount_el.value = current.noiseAmount;
+                noise_amount_value_el.textContent = current.noiseAmount.toFixed(2);
+                resonant_freq_el.value = current.resonantFreq;
+                resonant_freq_value_el.textContent = Math.round(current.resonantFreq);
+                resonant_q_el.value = current.resonantQ;
+                resonant_q_value_el.textContent = current.resonantQ.toFixed(1);
+                harmonic_freq_el.value = current.harmonicFreq;
+                harmonic_freq_value_el.textContent = Math.round(current.harmonicFreq);
+                harmonic_q_el.value = current.harmonicQ;
+                harmonic_q_value_el.textContent = current.harmonicQ.toFixed(1);
+                echeme_rate_el.value = current.echemeRate;
+                echeme_rate_value_el.textContent = current.echemeRate.toFixed(1);
+                echeme_duration_el.value = current.echemeDuration;
+                echeme_duration_value_el.textContent = Math.round(current.echemeDuration);
+                echeme_spacing_el.value = current.echemeSpacing;
+                echeme_spacing_value_el.textContent = Math.round(current.echemeSpacing);
+                phrase_intensity_el.value = current.phraseIntensity;
+                phrase_intensity_value_el.textContent = current.phraseIntensity.toFixed(1);
+                cicada_amplitude_el.value = current.cicadaAmplitude;
+                cicada_amplitude_value_el.textContent = current.cicadaAmplitude.toFixed(2);
+                
+                // Send parameter updates to synths
+                send_param("clickRate", current.clickRate);
+                send_param("clickDuration", current.clickDuration * 0.001);
+                send_param("clickJitter", current.clickJitter);
+                send_param("noiseAmount", current.noiseAmount);
+                send_param("resonantFreq", current.resonantFreq);
+                send_param("resonantQ", current.resonantQ);
+                send_param("harmonicFreq", current.harmonicFreq);
+                send_param("harmonicQ", current.harmonicQ);
+                send_param("echemeRate", current.echemeRate);
+                send_param("echemeDuration", current.echemeDuration * 0.001);
+                send_param("echemeSpacing", current.echemeSpacing * 0.001);
+                send_param("phraseIntensity", current.phraseIntensity);
+                send_param("amplitude", current.cicadaAmplitude);
+                
+                // Continue ramping
+                if (progress < 1.0) {
+                    setTimeout(rampParameters, updateInterval);
+                }
+            }
+            
+            // Start the ramping process
+            rampParameters();
+        }
+        
+        // Species preset buttons
+        preset_greengrocer_btn.addEventListener("click", () => {
+            apply_preset({
+                clickRate: 180,
+                clickDuration: 4,
+                clickJitter: 0.05,
+                noiseAmount: 0.3,
+                resonantFreq: 400,
+                resonantQ: 6,
+                harmonicFreq: 1200,
+                harmonicQ: 4,
+                pulseGroupSize: 8,
+                subGroupSize: 4,
+                groupSpacing: 15,
+                echemeRate: 0,
+                echemeDuration: 1000,
+                echemeSpacing: 100,
+                phraseIntensity: 1.0,
+                cicadaAmplitude: 0.2
+            });
+        });
+        
+        preset_double_drummer_btn.addEventListener("click", () => {
+            apply_preset({
+                clickRate: 350,
+                clickDuration: 2,
+                clickJitter: 0.15,
+                noiseAmount: 0.8,
+                resonantFreq: 350,
+                resonantQ: 12,
+                harmonicFreq: 1050,
+                harmonicQ: 8,
+                pulseGroupSize: 8,
+                subGroupSize: 3,
+                groupSpacing: 30,
+                echemeRate: 8,
+                echemeDuration: 150,
+                echemeSpacing: 75,
+                phraseIntensity: 1.5,
+                cicadaAmplitude: 0.4
+            });
+        });
+        
+        preset_typewriter_btn.addEventListener("click", () => {
+            apply_preset({
+                clickRate: 600,
+                clickDuration: 1.5,
+                clickJitter: 0.2,
+                noiseAmount: 0.9,
+                resonantFreq: 1200,
+                resonantQ: 3,
+                harmonicFreq: 2400,
+                harmonicQ: 2,
+                pulseGroupSize: 4,
+                subGroupSize: 2,
+                groupSpacing: 40,
+                echemeRate: 15,
+                echemeDuration: 80,
+                echemeSpacing: 60,
+                phraseIntensity: 0.8,
+                cicadaAmplitude: 0.15
+            });
+        });
+        
+        preset_redeye_btn.addEventListener("click", () => {
+            apply_preset({
+                clickRate: 250,
+                clickDuration: 3,
+                clickJitter: 0.1,
+                noiseAmount: 0.5,
+                resonantFreq: 800,
+                resonantQ: 8,
+                harmonicFreq: 1600,
+                harmonicQ: 5,
+                pulseGroupSize: 6,
+                subGroupSize: 3,
+                groupSpacing: 25,
+                echemeRate: 2,
+                echemeDuration: 400,
+                echemeSpacing: 300,
+                phraseIntensity: 1.2,
+                cicadaAmplitude: 0.25
+            });
+        });
+        
+        preset_cherry_nose_btn.addEventListener("click", () => {
+            apply_preset({
+                clickRate: 280,
+                clickDuration: 2.5,
+                clickJitter: 0.12,
+                noiseAmount: 0.6,
+                resonantFreq: 600,
+                resonantQ: 10,
+                harmonicFreq: 1800,
+                harmonicQ: 6,
+                pulseGroupSize: 7,
+                subGroupSize: 3,
+                groupSpacing: 22,
+                echemeRate: 5,
+                echemeDuration: 250,
+                echemeSpacing: 150,
+                phraseIntensity: 1.1,
+                cicadaAmplitude: 0.18
+            });
+        });
+        
+        // initialize UI to default values (override browser memory)
         power_el.checked = true
         
         // update controller warning display
