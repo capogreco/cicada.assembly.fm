@@ -161,6 +161,10 @@
         
         // store cicada parameters for later application
         let pending_cicada_params = {}
+        
+        // parameter rate limiting to prevent filter blow-ups
+        const parameterUpdateThrottles = new Map()  // paramName -> lastUpdateTime
+        const FILTER_UPDATE_INTERVAL = 100  // minimum ms between filter updates
         let pending_initial_state = null  // store initial state if audio not ready
         
         // webrtc configuration
@@ -505,6 +509,32 @@
             requestInitialParameters()
         }
         
+        // get appropriate ramp time for parameter to prevent audio blow-ups
+        function getParameterRampTime(paramName) {
+            if (paramName === 'resonantFreq' || paramName === 'harmonicFreq') {
+                return 0.5;  // 500ms for frequency parameters
+            } else if (paramName === 'resonantQ' || paramName === 'harmonicQ') {
+                return 0.3;  // 300ms for Q parameters  
+            } else if (paramName === 'clickRate' || paramName === 'echemeRate') {
+                return 0.2;  // 200ms for rate parameters
+            } else {
+                return 0.05; // 50ms for other parameters
+            }
+        }
+        
+        // check if parameter update should be throttled
+        function shouldThrottleParameter(paramName) {
+            const now = Date.now();
+            const lastUpdate = parameterUpdateThrottles.get(paramName) || 0;
+            const isFilterParam = paramName.includes('resonant') || paramName.includes('harmonic');
+            if (isFilterParam && (now - lastUpdate) < FILTER_UPDATE_INTERVAL) {
+                return true;  // throttle this update
+            }
+            
+            parameterUpdateThrottles.set(paramName, now);
+            return false;  // allow this update
+        }
+
         // visualizer with audio verification
         function draw_visualizer () {
             requestAnimationFrame (draw_visualizer)
@@ -557,6 +587,15 @@
             console.log (`param ${data.name} = ${data.value}`)
             if (cicada_node && audio_context) {
                 console.log("DEBUG: Applying parameter update:", data.name, "value:", data.value);
+                
+                // Check if this parameter update should be throttled
+                if (shouldThrottleParameter(data.name)) {
+                    console.log(`DEBUG: Throttling ${data.name} update to prevent blow-up`);
+                    return;
+                }
+                
+
+                
                 // Apply stochastic resolution if needed
                 let finalValue = data.value;
                 if (stochasticDistributor && PARAM_DEFINITIONS[data.name]?.stochastic) {
@@ -567,13 +606,31 @@
                         data.value, 
                         stochasticDistributor.stochasticConfig
                     );
+                    
+                    // Safety clamping for timing parameters to prevent rhythm engine breakdown
+                    if (data.name === 'groupSpacing') {
+                        const minSafe = 0.002; // 2ms minimum
+                        const maxSafe = 0.1;   // 100ms maximum  
+                        finalValue = Math.max(minSafe, Math.min(maxSafe, finalValue));
+                        console.log("DEBUG: Clamped groupSpacing to safe range:", finalValue);
+                    }
+                    
                     console.log("DEBUG: Stochastic resolution:", data.name, "base:", data.value, "final:", finalValue);
                 }
                 
-                // Generic parameter application using parameter definitions
+                // Generic parameter application with safer ramping
                 const param = cicada_node.parameters.get(data.name);
                 if (param) {
-                    param.linearRampToValueAtTime(finalValue, audio_context.currentTime + 0.05);
+                    // Use immediate changes for timing parameters (rhythmic quantization handled in processor)
+                    if (data.name === 'groupSpacing') {
+                        param.setValueAtTime(finalValue, audio_context.currentTime);
+                        console.log(`DEBUG: Applied ${data.name} immediately (rhythmic quantization in processor)`);
+                    } else {
+                        const rampTime = getParameterRampTime(data.name);
+                        param.cancelScheduledValues(audio_context.currentTime);
+                        param.linearRampToValueAtTime(finalValue, audio_context.currentTime + rampTime);
+                        console.log(`DEBUG: Applied ${data.name} with ${rampTime}s ramp`);
+                    }
                 } else {
                     console.warn(`Unknown parameter: ${data.name}`);
                 }
@@ -602,8 +659,16 @@
         // handle discrete parameter messages (TCP-like)
         function handle_discrete_param (data) {
             console.log (`discrete param ${data.name} = ${data.value}`)
-            if (cicada_node) {
-                // Send to AudioWorklet via message port
+            
+            // Handle power state specially - it controls the main gain node
+            if (data.name === "powered_on") {
+                is_powered_on = data.value
+                if (gain_node) {
+                    gain_node.gain.value = is_powered_on ? 1.0 : 0
+                    console.log(`Power ${is_powered_on ? 'ON' : 'OFF'} - gain set to ${gain_node.gain.value}`)
+                }
+            } else if (cicada_node) {
+                // Send other discrete parameters to AudioWorklet via message port
                 cicada_node.port.postMessage({
                     type: "discrete_param",
                     name: data.name,
@@ -630,6 +695,7 @@
         // handle regenerate ratios command
         function handle_regenerate_ratios(data) {
             console.log("Received regenerate ratios command");
+            console.log("DEBUG: Current stochastic distributor enabled:", stochasticDistributor?.isEnabled);
             
             if (!stochasticDistributor) {
                 console.log("No stochastic distributor available");
@@ -637,34 +703,66 @@
             }
             
             // Clear existing ratios
+            console.log("DEBUG: Clearing existing ratios");
             stochasticDistributor.clearRatios();
             
             // Update stochastic config if provided
             if (data.stochastic_config) {
+                console.log("DEBUG: Old stochastic config:", stochasticDistributor.stochasticConfig);
                 stochasticDistributor.stochasticConfig = data.stochastic_config;
+                console.log("DEBUG: New stochastic config:", data.stochastic_config);
                 console.log("Updated stochastic config");
             }
             
             // Re-resolve and apply all stochastic parameters if audio is ready
             if (cicada_node && audio_context && stochasticDistributor.stochasticConfig) {
                 console.log("Re-applying stochastic parameters with new ratios");
+                console.log("DEBUG: Audio context ready:", !!audio_context);
+                console.log("DEBUG: Cicada node ready:", !!cicada_node);
                 
                 // Get current base values and re-resolve with new ratios
                 Object.keys(PARAM_DEFINITIONS).forEach(paramName => {
                     if (PARAM_DEFINITIONS[paramName].stochastic) {
+                        console.log(`DEBUG: Processing stochastic parameter: ${paramName}`);
                         const param = cicada_node.parameters.get(paramName);
                         if (param && stochasticDistributor.stochasticConfig[paramName]) {
                             const config = stochasticDistributor.stochasticConfig[paramName];
-                            const newValue = stochasticDistributor.resolveParameter(
+                            const currentValue = param.value;
+                            console.log(`DEBUG: Current ${paramName} value: ${currentValue}`);
+                            console.log(`DEBUG: Config base for ${paramName}: ${config.base}`);
+                            
+                            let newValue = stochasticDistributor.resolveParameter(
                                 paramName, 
                                 config.base, 
                                 stochasticDistributor.stochasticConfig
                             );
-                            param.setValueAtTime(newValue, audio_context.currentTime);
-                            console.log(`Re-applied ${paramName}: ${config.base} → ${newValue}`);
+                            
+                            // Safety clamping for timing parameters to prevent rhythm engine breakdown
+                            if (paramName === 'groupSpacing') {
+                                const minSafe = 0.002; // 2ms minimum
+                                const maxSafe = 0.1;   // 100ms maximum
+                                newValue = Math.max(minSafe, Math.min(maxSafe, newValue));
+                                console.log(`DEBUG: Clamped groupSpacing regeneration to safe range: ${newValue}`);
+                            }
+                            
+                            // Use immediate changes for timing parameters (rhythmic quantization handled in processor)
+                            if (paramName === 'groupSpacing') {
+                                param.setValueAtTime(newValue, audio_context.currentTime);
+                                console.log(`Re-applied ${paramName}: ${config.base} → ${newValue} (was ${currentValue}) - rhythmic quantization in processor`);
+                            } else {
+                                param.setValueAtTime(newValue, audio_context.currentTime);
+                                console.log(`Re-applied ${paramName}: ${config.base} → ${newValue} (was ${currentValue})`);
+                            }
+                        } else {
+                            console.log(`DEBUG: Skipping ${paramName} - param exists: ${!!param}, config exists: ${!!stochasticDistributor.stochasticConfig[paramName]}`);
                         }
                     }
                 });
+            } else {
+                console.log("DEBUG: Cannot re-apply parameters - missing requirements:");
+                console.log("  - cicada_node:", !!cicada_node);
+                console.log("  - audio_context:", !!audio_context);
+                console.log("  - stochasticConfig:", !!stochasticDistributor.stochasticConfig);
             }
         }
         
@@ -722,9 +820,19 @@
                 PARAM_DEFINITIONS[name].type === 'continuous'
             ).forEach(paramName => {
                 if (resolvedParams[paramName] !== undefined) {
+                    let paramValue = resolvedParams[paramName];
+                    
+                    // Safety clamping for timing parameters to prevent rhythm engine breakdown
+                    if (paramName === 'groupSpacing') {
+                        const minSafe = 0.002; // 2ms minimum
+                        const maxSafe = 0.1;   // 100ms maximum
+                        paramValue = Math.max(minSafe, Math.min(maxSafe, paramValue));
+                        console.log(`DEBUG: Clamped initial groupSpacing to safe range: ${paramValue}`);
+                    }
+                    
                     const param = cicada_node.parameters.get(paramName);
                     if (param) {
-                        param.setValueAtTime(resolvedParams[paramName], audio_context.currentTime);
+                        param.setValueAtTime(paramValue, audio_context.currentTime);
                     }
                 }
             });

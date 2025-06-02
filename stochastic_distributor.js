@@ -4,6 +4,7 @@ export class StochasticDistributor {
         this.clientId = clientId;
         this.clientRatios = new Map(); // Cache for generated ratios
         this.isEnabled = false;
+        this.generationCounter = 0; // Counter for ratio regeneration
     }
 
     // Parse Stochastic Integer Notation (SIN) like "1,3,5" or "2-7"
@@ -41,15 +42,27 @@ export class StochasticDistributor {
         const numerators = this.parseSIN(numSIN);
         const denominators = this.parseSIN(denSIN);
         
-        // Use deterministic pseudo-randomness based on client ID and parameter
-        const seed = this.hashString(clientId + paramName);
+        // Use deterministic pseudo-randomness based on client ID, parameter, and generation
+        const seed = this.hashString(clientId + paramName + this.generationCounter);
         const rng = this.createSeededRNG(seed);
         
         // Select random numerator and denominator
         const num = numerators[Math.floor(rng() * numerators.length)];
         const den = denominators[Math.floor(rng() * denominators.length)];
         
-        return num / den;
+        let ratio = num / den;
+        
+        // Apply safety limits for timing-critical parameters
+        if (paramName === 'groupSpacing') {
+            // Clamp to reasonable range for timing parameters (0.1x to 5x)
+            ratio = Math.max(0.1, Math.min(5.0, ratio));
+            console.log(`DEBUG: Limited ${paramName} ratio ${num}/${den} = ${num/den} → ${ratio}`);
+        } else {
+            // Less strict limits for frequency parameters (0.25x to 4x)
+            ratio = Math.max(0.25, Math.min(4.0, ratio));
+        }
+        
+        return ratio;
     }
 
     // Ensure client has a cached ratio for the given parameter
@@ -103,6 +116,8 @@ export class StochasticDistributor {
     // Clear cached ratios (useful for regeneration)
     clearRatios() {
         this.clientRatios.clear();
+        this.generationCounter++;
+        console.log(`DEBUG: Generation counter incremented to ${this.generationCounter}`);
     }
 
     // Regenerate ratios for specific parameters
@@ -112,6 +127,8 @@ export class StochasticDistributor {
                 const key = `${this.clientId}_${paramName}`;
                 this.clientRatios.delete(key);
             });
+            this.generationCounter++;
+            console.log(`DEBUG: Generation counter incremented to ${this.generationCounter} for specific params`);
         } else {
             this.clearRatios();
         }

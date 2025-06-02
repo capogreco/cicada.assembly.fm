@@ -2,7 +2,7 @@ class CicadaProcessor extends AudioWorkletProcessor {
     static get parameterDescriptors() {
         return [
             { name: 'clickRate', defaultValue: 200, minValue: 50, maxValue: 800, automationRate: 'a-rate' },
-            { name: 'clickDuration', defaultValue: 0.003, minValue: 0.001, maxValue: 0.01, automationRate: 'a-rate' },
+            { name: 'clickDuration', defaultValue: 0.003, minValue: 0.00001, maxValue: 0.01, automationRate: 'a-rate' },
             { name: 'clickJitter', defaultValue: 0.1, minValue: 0, maxValue: 0.3, automationRate: 'a-rate' },
             { name: 'noiseAmount', defaultValue: 0.7, minValue: 0, maxValue: 1, automationRate: 'a-rate' },
             { name: 'resonantFreq', defaultValue: 800, minValue: 200, maxValue: 3000, automationRate: 'a-rate' },
@@ -12,9 +12,29 @@ class CicadaProcessor extends AudioWorkletProcessor {
             { name: 'echemeRate', defaultValue: 2.0, minValue: 0.1, maxValue: 10, automationRate: 'a-rate' },
             { name: 'echemeDuration', defaultValue: 0.3, minValue: 0.05, maxValue: 2.0, automationRate: 'a-rate' },
             { name: 'echemeSpacing', defaultValue: 0.2, minValue: 0.05, maxValue: 1.0, automationRate: 'a-rate' },
+            { name: 'echemeDurationDetune', defaultValue: 0.0, minValue: 0.0, maxValue: 0.02, automationRate: 'a-rate' },
+            { name: 'echemeSpacingDetune', defaultValue: 0.0, minValue: 0.0, maxValue: 0.02, automationRate: 'a-rate' },
             { name: 'phraseIntensity', defaultValue: 1.0, minValue: 0.1, maxValue: 2.0, automationRate: 'a-rate' },
-            { name: 'amplitude', defaultValue: 0.0, minValue: 0.0, maxValue: 1.0, automationRate: 'a-rate' }
+            { name: 'amplitude', defaultValue: 0.0, minValue: 0.0, maxValue: 1.0, automationRate: 'a-rate' },
+            { name: 'groupSpacing', defaultValue: 0.02, minValue: 0.002, maxValue: 0.2, automationRate: 'a-rate' }
         ];
+    }
+
+    // Simple 1D simplex noise implementation
+    simplexNoise(x) {
+        const i = Math.floor(x);
+        const f = x - i;
+        const t = f * f * (3.0 - 2.0 * f);
+        
+        const a = this.hash(i);
+        const b = this.hash(i + 1);
+        
+        return a + t * (b - a);
+    }
+    
+    hash(n) {
+        n = Math.sin(n) * 43758.5453;
+        return 2.0 * (n - Math.floor(n)) - 1.0;
     }
 
     constructor() {
@@ -25,6 +45,9 @@ class CicadaProcessor extends AudioWorkletProcessor {
         this.clickEnvelope = 0;
         this.randomSeed = 1;
         
+        // Simplex noise for modulation
+        this.noiseTime = 0;
+        
         // Hierarchical rhythm tracking
         this.echemeTimer = 0;
         this.echemePhase = 'active';
@@ -33,10 +56,14 @@ class CicadaProcessor extends AudioWorkletProcessor {
         // TCP-like parameter state (from message port)
         this.pulseGroupSize = 6;
         this.subGroupSize = 3;
-        this.groupSpacing = 0.02;
         this.pulseCount = 0;
         this.subGroupCount = 0;
         this.groupTimer = 0;
+        
+        // Rhythmic quantization for timing parameters
+        this.currentGroupSpacing = 0.02; // Current active spacing
+        this.targetGroupSpacing = 0.02;  // Target spacing to apply
+        this.pendingGroupSpacingChange = false;
         
         // Stage 2: Resonant filters (biquad coefficients)
         this.primaryFilter = {
@@ -61,9 +88,6 @@ class CicadaProcessor extends AudioWorkletProcessor {
                         break;
                     case 'subGroupSize':
                         this.subGroupSize = Math.floor(value);
-                        break;
-                    case 'groupSpacing':
-                        this.groupSpacing = value;
                         break;
                 }
             }
@@ -128,8 +152,11 @@ class CicadaProcessor extends AudioWorkletProcessor {
         const echemeRate = parameters.echemeRate;
         const echemeDuration = parameters.echemeDuration;
         const echemeSpacing = parameters.echemeSpacing;
+        const echemeDurationDetune = parameters.echemeDurationDetune;
+        const echemeSpacingDetune = parameters.echemeSpacingDetune;
         const phraseIntensity = parameters.phraseIntensity;
         const amplitude = parameters.amplitude;
+        const groupSpacing = parameters.groupSpacing;
         
         // Update filters if frequency changed
         const freq1 = resonantFreq.length > 1 ? resonantFreq[0] : resonantFreq[0];
@@ -156,16 +183,36 @@ class CicadaProcessor extends AudioWorkletProcessor {
                 const echRate = echemeRate.length > 1 ? echemeRate[i] : echemeRate[0];
                 const echDur = echemeDuration.length > 1 ? echemeDuration[i] : echemeDuration[0];
                 const echSpace = echemeSpacing.length > 1 ? echemeSpacing[i] : echemeSpacing[0];
+                const echDurDetune = echemeDurationDetune.length > 1 ? echemeDurationDetune[i] : echemeDurationDetune[0];
+                const echSpaceDetune = echemeSpacingDetune.length > 1 ? echemeSpacingDetune[i] : echemeSpacingDetune[0];
+                const groupSpaceParam = groupSpacing.length > 1 ? groupSpacing[i] : groupSpacing[0];
+                
+                // Detect groupSpacing parameter changes and queue for rhythmic quantization
+                if (Math.abs(groupSpaceParam - this.targetGroupSpacing) > 0.0001) {
+                    this.targetGroupSpacing = groupSpaceParam;
+                    this.pendingGroupSpacingChange = true;
+                    console.log(`Queued groupSpacing change: ${this.currentGroupSpacing} → ${this.targetGroupSpacing}`);
+                }
+                
+                // Apply simplex noise modulation to echeme timing
+                this.noiseTime += 1.0 / sampleRate;
+                const noiseScale = 0.05; // Very slow modulation - adjust for speed
+                const durationNoise = this.simplexNoise(this.noiseTime * noiseScale);
+                const spacingNoise = this.simplexNoise((this.noiseTime + 100) * noiseScale); // Offset for independence
+                
+                // Apply modulation: base value ± (detune * noise)
+                const modulatedEchemeDuration = echDur * (1.0 + echDurDetune * durationNoise);
+                const modulatedEchemeSpacing = echSpace * (1.0 + echSpaceDetune * spacingNoise);
                 const phraseInt = phraseIntensity.length > 1 ? phraseIntensity[i] : phraseIntensity[0];
                 
                 // Stage 1: Generate clicks with hierarchical rhythms
                 let clickSignal = 0;
                 
                 // Update echeme state
-                const echemeTotal = echDur + echSpace;
+                const echemeTotal = modulatedEchemeDuration + modulatedEchemeSpacing;
                 const ecdemeCyclePos = echemeTotal > 0 ? (currentTime - this.echemeStartTime) % echemeTotal : 0;
                 
-                if (echemeTotal > 0 && ecdemeCyclePos < echDur) {
+                if (echemeTotal > 0 && ecdemeCyclePos < modulatedEchemeDuration) {
                     this.echemePhase = 'active';
                 } else if (echemeTotal > 0) {
                     this.echemePhase = 'silent';
@@ -179,7 +226,14 @@ class CicadaProcessor extends AudioWorkletProcessor {
                     this.groupTimer--;
                     rhythmGate = 0.0;
                 } else if (this.pulseCount >= this.pulseGroupSize) {
-                    this.groupTimer = this.groupSpacing * sampleRate;
+                    // Rhythmically-quantized timing changes happen here
+                    if (this.pendingGroupSpacingChange) {
+                        this.currentGroupSpacing = this.targetGroupSpacing;
+                        this.pendingGroupSpacingChange = false;
+                        console.log(`Applied groupSpacing change at group boundary: ${this.currentGroupSpacing}`);
+                    }
+                    
+                    this.groupTimer = this.currentGroupSpacing * sampleRate;
                     this.pulseCount = 0;
                     this.subGroupCount = 0;
                     rhythmGate = 0.0;

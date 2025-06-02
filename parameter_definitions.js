@@ -48,6 +48,18 @@ export const PARAM_DEFINITIONS = {
         type: 'continuous',
         default: 2.0
     },
+    
+    groupSpacing: {
+        element: 'group_spacing',
+        baseElement: 'group_spacing_base',
+        numSINElement: 'group_spacing_num_sin',
+        denSINElement: 'group_spacing_den_sin',
+        valueElement: 'group_spacing_value',
+        stochastic: true,
+        unit: 0.001, // Convert ms to seconds
+        type: 'continuous',
+        default: 20
+    },
 
     // Regular continuous parameters
     clickDuration: {
@@ -56,7 +68,7 @@ export const PARAM_DEFINITIONS = {
         stochastic: false,
         unit: 0.001, // Convert ms to seconds
         type: 'continuous',
-        default: 3
+        default: 3.00
     },
     
     clickJitter: {
@@ -113,6 +125,24 @@ export const PARAM_DEFINITIONS = {
         default: 200
     },
     
+    echemeDurationDetune: {
+        element: 'echeme_duration_detune',
+        valueElement: 'echeme_duration_detune_value',
+        stochastic: false,
+        unit: 0.01, // Convert percentage to decimal
+        type: 'continuous',
+        default: 0
+    },
+    
+    echemeSpacingDetune: {
+        element: 'echeme_spacing_detune',
+        valueElement: 'echeme_spacing_detune_value',
+        stochastic: false,
+        unit: 0.01, // Convert percentage to decimal
+        type: 'continuous',
+        default: 0
+    },
+    
     phraseIntensity: {
         element: 'phrase_intensity',
         valueElement: 'phrase_intensity_value',
@@ -150,14 +180,7 @@ export const PARAM_DEFINITIONS = {
         default: 3
     },
     
-    groupSpacing: {
-        element: 'group_spacing',
-        valueElement: 'group_spacing_value',
-        stochastic: false,
-        unit: 0.001, // Convert ms to seconds
-        type: 'discrete',
-        default: 20
-    },
+
 
     // Boolean parameters
     powered_on: {

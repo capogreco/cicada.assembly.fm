@@ -101,7 +101,7 @@
     
     <div class="control">
         <label for="click_duration">Click Duration: <span id="click_duration_value">3.0</span> ms</label>
-        <input type="range" id="click_duration" min="1" max="10" step="0.5" value="3.0">
+        <input type="range" id="click_duration" min="0.01" max="10" step="0.01" value="3.0">
     </div>
     
     <div class="control">
@@ -161,6 +161,11 @@
     <div class="control">
         <label for="group_spacing">Group Spacing: <span id="group_spacing_value">20</span> ms</label>
         <input type="range" id="group_spacing" min="5" max="100" step="1" value="20">
+        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
+            <div>Base: <input type="number" id="group_spacing_base" value="20" style="width: 60px;"></div>
+            <div>Num: <input type="text" id="group_spacing_num_sin" value="1-3" style="width: 60px;"></div>
+            <div>Den: <input type="text" id="group_spacing_den_sin" value="1-2" style="width: 60px;"></div>
+        </div>
     </div>
     
     <div class="control">
@@ -179,8 +184,18 @@
     </div>
     
     <div class="control">
+        <label for="echeme_duration_detune">Duration Detune Width: <span id="echeme_duration_detune_value">0</span>%</label>
+        <input type="range" id="echeme_duration_detune" min="0" max="2" step="0.1" value="0">
+    </div>
+    
+    <div class="control">
         <label for="echeme_spacing">Echeme Spacing: <span id="echeme_spacing_value">200</span> ms</label>
         <input type="range" id="echeme_spacing" min="50" max="1000" step="10" value="200">
+    </div>
+    
+    <div class="control">
+        <label for="echeme_spacing_detune">Spacing Detune Width: <span id="echeme_spacing_detune_value">0</span>%</label>
+        <input type="range" id="echeme_spacing_detune" min="0" max="2" step="0.1" value="0">
     </div>
     
     <div class="control">
@@ -274,6 +289,10 @@
         const echeme_duration_value_el = document.getElementById ("echeme_duration_value")
         const echeme_spacing_el = document.getElementById ("echeme_spacing")
         const echeme_spacing_value_el = document.getElementById ("echeme_spacing_value")
+        const echeme_duration_detune_el = document.getElementById ("echeme_duration_detune")
+        const echeme_duration_detune_value_el = document.getElementById ("echeme_duration_detune_value")
+        const echeme_spacing_detune_el = document.getElementById ("echeme_spacing_detune")
+        const echeme_spacing_detune_value_el = document.getElementById ("echeme_spacing_detune_value")
         const phrase_intensity_el = document.getElementById ("phrase_intensity")
         const phrase_intensity_value_el = document.getElementById ("phrase_intensity_value")
         const cicada_amplitude_el = document.getElementById ("cicada_amplitude")
@@ -285,6 +304,208 @@
         const preset_typewriter_btn = document.getElementById ("preset_typewriter")
         const preset_redeye_btn = document.getElementById ("preset_redeye")
         const preset_cherry_nose_btn = document.getElementById ("preset_cherry_nose")
+
+        // Controller state caching
+        const CTRL_STATE_KEY = 'cicada_ctrl_state'
+        
+        function saveControllerState() {
+            const state = {
+                // Power and harmonic ratios
+                power: power_el.checked,
+                harmonic_ratios_enabled: harmonic_ratios_enabled_el.checked,
+                
+                // Main sliders
+                click_rate: parseFloat(click_rate_el.value),
+                click_duration: parseFloat(click_duration_el.value),
+                click_jitter: parseFloat(click_jitter_el.value),
+                noise_amount: parseFloat(noise_amount_el.value),
+                resonant_freq: parseFloat(resonant_freq_el.value),
+                resonant_q: parseFloat(resonant_q_el.value),
+                harmonic_freq: parseFloat(harmonic_freq_el.value),
+                harmonic_q: parseFloat(harmonic_q_el.value),
+                pulse_group_size: parseInt(pulse_group_size_el.value),
+                sub_group_size: parseInt(sub_group_size_el.value),
+                group_spacing: parseFloat(group_spacing_el.value),
+                echeme_rate: parseFloat(echeme_rate_el.value),
+                echeme_duration: parseFloat(echeme_duration_el.value),
+                echeme_spacing: parseFloat(echeme_spacing_el.value),
+                echeme_duration_detune: parseFloat(echeme_duration_detune_el.value),
+                echeme_spacing_detune: parseFloat(echeme_spacing_detune_el.value),
+                phrase_intensity: parseFloat(phrase_intensity_el.value),
+                cicada_amplitude: parseFloat(cicada_amplitude_el.value),
+                
+                // Base values for stochastic parameters
+                click_rate_base: parseFloat(document.getElementById("click_rate_base").value),
+                resonant_freq_base: parseFloat(document.getElementById("resonant_freq_base").value),
+                harmonic_freq_base: parseFloat(document.getElementById("harmonic_freq_base").value),
+                group_spacing_base: parseFloat(document.getElementById("group_spacing_base").value),
+                echeme_rate_base: parseFloat(document.getElementById("echeme_rate_base").value),
+                
+                // SIN notation values
+                click_rate_num_sin: document.getElementById("click_rate_num_sin").value,
+                click_rate_den_sin: document.getElementById("click_rate_den_sin").value,
+                resonant_freq_num_sin: document.getElementById("resonant_freq_num_sin").value,
+                resonant_freq_den_sin: document.getElementById("resonant_freq_den_sin").value,
+                harmonic_freq_num_sin: document.getElementById("harmonic_freq_num_sin").value,
+                harmonic_freq_den_sin: document.getElementById("harmonic_freq_den_sin").value,
+                group_spacing_num_sin: document.getElementById("group_spacing_num_sin").value,
+                group_spacing_den_sin: document.getElementById("group_spacing_den_sin").value,
+                echeme_rate_num_sin: document.getElementById("echeme_rate_num_sin").value,
+                echeme_rate_den_sin: document.getElementById("echeme_rate_den_sin").value,
+                
+                timestamp: Date.now()
+            };
+            
+            try {
+                localStorage.setItem(CTRL_STATE_KEY, JSON.stringify(state));
+                console.log("Controller state saved");
+            } catch (e) {
+                console.warn("Failed to save controller state:", e);
+            }
+        }
+        
+        function loadControllerState() {
+            try {
+                const saved = localStorage.getItem(CTRL_STATE_KEY);
+                if (!saved) return false;
+                
+                const state = JSON.parse(saved);
+                console.log("Loading controller state from cache");
+                
+                // Apply power and harmonic ratios
+                power_el.checked = state.power !== undefined ? state.power : true;
+                harmonic_ratios_enabled_el.checked = state.harmonic_ratios_enabled !== undefined ? state.harmonic_ratios_enabled : true;
+                
+                // Apply main sliders
+                if (state.click_rate !== undefined) {
+                    click_rate_el.value = state.click_rate;
+                    click_rate_value_el.textContent = state.click_rate;
+                }
+                if (state.click_duration !== undefined) {
+                    click_duration_el.value = state.click_duration;
+                    click_duration_value_el.textContent = state.click_duration.toFixed(2);
+                }
+                if (state.click_jitter !== undefined) {
+                    click_jitter_el.value = state.click_jitter;
+                    click_jitter_value_el.textContent = state.click_jitter.toFixed(2);
+                }
+                if (state.noise_amount !== undefined) {
+                    noise_amount_el.value = state.noise_amount;
+                    noise_amount_value_el.textContent = state.noise_amount.toFixed(2);
+                }
+                if (state.resonant_freq !== undefined) {
+                    resonant_freq_el.value = state.resonant_freq;
+                    resonant_freq_value_el.textContent = Math.round(state.resonant_freq);
+                }
+                if (state.resonant_q !== undefined) {
+                    resonant_q_el.value = state.resonant_q;
+                    resonant_q_value_el.textContent = state.resonant_q;
+                }
+                if (state.harmonic_freq !== undefined) {
+                    harmonic_freq_el.value = state.harmonic_freq;
+                    harmonic_freq_value_el.textContent = Math.round(state.harmonic_freq);
+                }
+                if (state.harmonic_q !== undefined) {
+                    harmonic_q_el.value = state.harmonic_q;
+                    harmonic_q_value_el.textContent = state.harmonic_q;
+                }
+                if (state.pulse_group_size !== undefined) {
+                    pulse_group_size_el.value = state.pulse_group_size;
+                    pulse_group_size_value_el.textContent = state.pulse_group_size;
+                }
+                if (state.sub_group_size !== undefined) {
+                    sub_group_size_el.value = state.sub_group_size;
+                    sub_group_size_value_el.textContent = state.sub_group_size;
+                }
+                if (state.group_spacing !== undefined) {
+                    group_spacing_el.value = state.group_spacing;
+                    group_spacing_value_el.textContent = state.group_spacing;
+                }
+                if (state.echeme_rate !== undefined) {
+                    echeme_rate_el.value = state.echeme_rate;
+                    echeme_rate_value_el.textContent = state.echeme_rate.toFixed(1);
+                }
+                if (state.echeme_duration !== undefined) {
+                    echeme_duration_el.value = state.echeme_duration;
+                    echeme_duration_value_el.textContent = Math.round(state.echeme_duration);
+                }
+                if (state.echeme_spacing !== undefined) {
+                    echeme_spacing_el.value = state.echeme_spacing;
+                    echeme_spacing_value_el.textContent = Math.round(state.echeme_spacing);
+                }
+                if (state.echeme_duration_detune !== undefined) {
+                    echeme_duration_detune_el.value = state.echeme_duration_detune;
+                    echeme_duration_detune_value_el.textContent = state.echeme_duration_detune.toFixed(1);
+                }
+                if (state.echeme_spacing_detune !== undefined) {
+                    echeme_spacing_detune_el.value = state.echeme_spacing_detune;
+                    echeme_spacing_detune_value_el.textContent = state.echeme_spacing_detune.toFixed(1);
+                }
+                if (state.phrase_intensity !== undefined) {
+                    phrase_intensity_el.value = state.phrase_intensity;
+                    phrase_intensity_value_el.textContent = state.phrase_intensity.toFixed(1);
+                }
+                if (state.cicada_amplitude !== undefined) {
+                    cicada_amplitude_el.value = state.cicada_amplitude;
+                    cicada_amplitude_value_el.textContent = state.cicada_amplitude.toFixed(2);
+                }
+                
+                // Apply base values
+                if (state.click_rate_base !== undefined) {
+                    document.getElementById("click_rate_base").value = state.click_rate_base;
+                }
+                if (state.resonant_freq_base !== undefined) {
+                    document.getElementById("resonant_freq_base").value = state.resonant_freq_base;
+                }
+                if (state.harmonic_freq_base !== undefined) {
+                    document.getElementById("harmonic_freq_base").value = state.harmonic_freq_base;
+                }
+                if (state.group_spacing_base !== undefined) {
+                    document.getElementById("group_spacing_base").value = state.group_spacing_base;
+                }
+                if (state.echeme_rate_base !== undefined) {
+                    document.getElementById("echeme_rate_base").value = state.echeme_rate_base;
+                }
+                
+                // Apply SIN notation values
+                if (state.click_rate_num_sin !== undefined) {
+                    document.getElementById("click_rate_num_sin").value = state.click_rate_num_sin;
+                }
+                if (state.click_rate_den_sin !== undefined) {
+                    document.getElementById("click_rate_den_sin").value = state.click_rate_den_sin;
+                }
+                if (state.resonant_freq_num_sin !== undefined) {
+                    document.getElementById("resonant_freq_num_sin").value = state.resonant_freq_num_sin;
+                }
+                if (state.resonant_freq_den_sin !== undefined) {
+                    document.getElementById("resonant_freq_den_sin").value = state.resonant_freq_den_sin;
+                }
+                if (state.harmonic_freq_num_sin !== undefined) {
+                    document.getElementById("harmonic_freq_num_sin").value = state.harmonic_freq_num_sin;
+                }
+                if (state.harmonic_freq_den_sin !== undefined) {
+                    document.getElementById("harmonic_freq_den_sin").value = state.harmonic_freq_den_sin;
+                }
+                if (state.group_spacing_num_sin !== undefined) {
+                    document.getElementById("group_spacing_num_sin").value = state.group_spacing_num_sin;
+                }
+                if (state.group_spacing_den_sin !== undefined) {
+                    document.getElementById("group_spacing_den_sin").value = state.group_spacing_den_sin;
+                }
+                if (state.echeme_rate_num_sin !== undefined) {
+                    document.getElementById("echeme_rate_num_sin").value = state.echeme_rate_num_sin;
+                }
+                if (state.echeme_rate_den_sin !== undefined) {
+                    document.getElementById("echeme_rate_den_sin").value = state.echeme_rate_den_sin;
+                }
+                
+                console.log("Controller state loaded successfully");
+                return true;
+            } catch (e) {
+                console.warn("Failed to load controller state:", e);
+                return false;
+            }
+        }
         
         // connect to websocket
         function connect_websocket () {
@@ -735,17 +956,8 @@
         const power_el = document.getElementById ("power")
         power_el.addEventListener ("change", (e) => {
             const is_on = e.target.checked
-            
-            // send to all connected peers via command channel (TCP-like)
-            peers.forEach ((peer, id) => {
-                if (peer.command_channel && peer.command_channel.readyState === "open") {
-                    peer.command_channel.send (JSON.stringify ({
-                        type: "command",
-                        name: "power",
-                        value: is_on
-                    }))
-                }
-            })
+            send_param("powered_on", is_on, "discrete_param")
+            saveControllerState()
         })
         
         // harmonic ratio generator functions
@@ -836,24 +1048,28 @@
             click_rate_value_el.textContent = value
             document.getElementById("click_rate_base").value = value
             send_param("clickRate", value)
+            saveControllerState()
         })
         
         click_duration_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            click_duration_value_el.textContent = value.toFixed(1)
+            click_duration_value_el.textContent = value.toFixed(2)
             send_param("clickDuration", value * 0.001) // Convert ms to seconds
+            saveControllerState()
         })
         
         click_jitter_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             click_jitter_value_el.textContent = value.toFixed(2)
             send_param("clickJitter", value)
+            saveControllerState()
         })
         
         noise_amount_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             noise_amount_value_el.textContent = value.toFixed(2)
             send_param("noiseAmount", value)
+            saveControllerState()
         })
         
         resonant_freq_el.addEventListener ("input", (e) => {
@@ -861,12 +1077,14 @@
             resonant_freq_value_el.textContent = value
             document.getElementById("resonant_freq_base").value = value
             send_param("resonantFreq", value)
+            saveControllerState()
         })
         
         resonant_q_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             resonant_q_value_el.textContent = value
             send_param("resonantQ", value)
+            saveControllerState()
         })
         
         harmonic_freq_el.addEventListener ("input", (e) => {
@@ -874,12 +1092,14 @@
             harmonic_freq_value_el.textContent = value
             document.getElementById("harmonic_freq_base").value = value
             send_param("harmonicFreq", value)
+            saveControllerState()
         })
         
         harmonic_q_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             harmonic_q_value_el.textContent = value
             send_param("harmonicQ", value)
+            saveControllerState()
         })
         
         echeme_rate_el.addEventListener ("input", (e) => {
@@ -887,30 +1107,49 @@
             echeme_rate_value_el.textContent = value.toFixed(1)
             document.getElementById("echeme_rate_base").value = value
             send_param("echemeRate", value)
+            saveControllerState()
         })
         
         echeme_duration_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             echeme_duration_value_el.textContent = value
             send_param("echemeDuration", value * 0.001) // Convert ms to seconds
+            saveControllerState()
         })
         
         echeme_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             echeme_spacing_value_el.textContent = value
             send_param("echemeSpacing", value * 0.001) // Convert ms to seconds
+            saveControllerState()
+        })
+        
+        echeme_duration_detune_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            echeme_duration_detune_value_el.textContent = value.toFixed(1)
+            send_param("echemeDurationDetune", value * 0.01) // Convert percentage to decimal
+            saveControllerState()
+        })
+        
+        echeme_spacing_detune_el.addEventListener ("input", (e) => {
+            const value = parseFloat (e.target.value)
+            echeme_spacing_detune_value_el.textContent = value.toFixed(1)
+            send_param("echemeSpacingDetune", value * 0.01) // Convert percentage to decimal
+            saveControllerState()
         })
         
         phrase_intensity_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             phrase_intensity_value_el.textContent = value.toFixed(1)
             send_param("phraseIntensity", value)
+            saveControllerState()
         })
         
         cicada_amplitude_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             cicada_amplitude_value_el.textContent = value.toFixed (2)
             send_param("amplitude", value)
+            saveControllerState()
         })
         
         // TCP-like parameters (discrete)
@@ -918,32 +1157,78 @@
             const value = parseInt (e.target.value)
             pulse_group_size_value_el.textContent = value
             send_param("pulseGroupSize", value, "discrete_param")
+            saveControllerState()
         })
         
         sub_group_size_el.addEventListener ("input", (e) => {
             const value = parseInt (e.target.value)
             sub_group_size_value_el.textContent = value
             send_param("subGroupSize", value, "discrete_param")
+            saveControllerState()
         })
         
         group_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
             group_spacing_value_el.textContent = value
-            send_param("groupSpacing", value * 0.001, "discrete_param") // Convert ms to seconds
+            document.getElementById("group_spacing_base").value = value
+            send_param("groupSpacing", value * 0.001) // Convert ms to seconds
+            saveControllerState()
         })
         
         // regenerate ratios button
         document.getElementById("regenerate_ratios").addEventListener("click", regenerateHarmonicRatios)
         
         // SIN field change listeners (regenerate on notation changes)
-        document.getElementById("click_rate_num_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("click_rate_den_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("resonant_freq_num_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("resonant_freq_den_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("harmonic_freq_num_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("harmonic_freq_den_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("echeme_rate_num_sin").addEventListener("change", regenerateHarmonicRatios)
-        document.getElementById("echeme_rate_den_sin").addEventListener("change", regenerateHarmonicRatios)
+        document.getElementById("click_rate_num_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("click_rate_den_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("resonant_freq_num_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("resonant_freq_den_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("harmonic_freq_num_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("harmonic_freq_den_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("group_spacing_num_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("group_spacing_den_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("echeme_rate_num_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        document.getElementById("echeme_rate_den_sin").addEventListener("change", (e) => {
+            regenerateHarmonicRatios()
+            saveControllerState()
+        })
+        
+        // Base value change listeners
+        document.getElementById("click_rate_base").addEventListener("change", saveControllerState)
+        document.getElementById("resonant_freq_base").addEventListener("change", saveControllerState)
+        document.getElementById("harmonic_freq_base").addEventListener("change", saveControllerState)
+        document.getElementById("group_spacing_base").addEventListener("change", saveControllerState)
+        document.getElementById("echeme_rate_base").addEventListener("change", saveControllerState)
+        
+        // Harmonic ratios enabled checkbox
+        harmonic_ratios_enabled_el.addEventListener("change", saveControllerState)
 
         // initialize UI to default values (override browser memory)
         power_el.checked = true
@@ -1008,7 +1293,9 @@
             // Send discrete parameters immediately
             send_param("pulseGroupSize", params.pulseGroupSize, "discrete_param");
             send_param("subGroupSize", params.subGroupSize, "discrete_param");
-            send_param("groupSpacing", params.groupSpacing * 0.001, "discrete_param");
+            
+            // Send continuous stochastic parameter
+            send_param("groupSpacing", params.groupSpacing * 0.001);
             
             // Update discrete parameter displays
             pulse_group_size_el.value = params.pulseGroupSize;
@@ -1202,8 +1489,12 @@
             });
         });
         
-        // initialize UI to default values (override browser memory)
-        power_el.checked = true
+        // Try to load saved state, otherwise use defaults
+        if (!loadControllerState()) {
+            console.log("No saved state found, using defaults");
+            // initialize UI to default values (override browser memory)
+            power_el.checked = true
+        }
         
         // update controller warning display
         function update_controller_warning () {
