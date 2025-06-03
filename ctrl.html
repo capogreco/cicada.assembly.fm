@@ -983,6 +983,8 @@
 
         
         function sendInitialStateToSynth(peer, synthId) {
+            console.log(`DEBUG: sendInitialStateToSynth called for synth: ${synthId}`);
+            
             if (!peer.channel || peer.channel.readyState !== "open") {
                 console.log("Cannot send initial state - channel not ready");
                 return;
@@ -994,8 +996,19 @@
             Object.keys(PARAM_CONFIG).forEach(paramName => {
                 const config = PARAM_CONFIG[paramName];
                 const rawValue = ParameterManager.getElementValue(config.element);
+                
+                // Debug logging for power state
+                if (paramName === "powered_on") {
+                    console.log(`DEBUG: Power state - element: ${config.element}, rawValue: ${rawValue}, checkbox checked: ${document.getElementById(config.element).checked}`);
+                }
+                
                 if (rawValue !== null) {
                     distributeParameter(paramName, rawValue, config, synthId);
+                    
+                    // Debug logging for power state distribution
+                    if (paramName === "powered_on") {
+                        console.log(`DEBUG: Distributed power state - paramName: ${paramName}, rawValue: ${rawValue}, to synth: ${synthId}`);
+                    }
                 }
             });
             
@@ -1048,35 +1061,44 @@
         
         function distributeParameter(paramName, rawValue, config, synthId, forceRegeneration = false) {
             // Apply unit conversion
-            let scaledValue = rawValue * config.unit;
+            const baseValue = rawValue * config.unit;
             
-            // Apply stochastic resolution if enabled
-            if (config.stochastic && harmonic_ratios_enabled_el.checked) {
-                const stochasticConfig = ParameterManager.getStochasticConfig();
-                if (stochasticConfig[paramName]) {
-                    const distributor = StochasticDistributor.createForClient(synthId);
-                    distributor.setEnabled(true);
-                    if (forceRegeneration) {
-                        distributor.clearRatios();
-                    }
-                    scaledValue = distributor.resolveParameter(paramName, scaledValue, stochasticConfig);
-                }
+            // Debug logging for power state
+            if (paramName === "powered_on") {
+                console.log(`DEBUG: distributeParameter - paramName: ${paramName}, rawValue: ${rawValue}, baseValue: ${baseValue}, config.unit: ${config.unit}`);
             }
-            
-            // Apply safety clamping
-            const safeValue = ParameterManager.applySafety(scaledValue, config.safety);
             
             // Send to synth with unified message format
             const peer = peers.get(synthId);
             if (peer && peer.channel && peer.channel.readyState === "open") {
-                peer.channel.send(JSON.stringify({
+                const message = {
                     type: "param_update",
                     name: paramName,
-                    value: safeValue,
+                    value: baseValue,
                     rampTime: config.rampTime,
                     integer: config.integer || false,
-                    boolean: config.boolean || false
-                }));
+                    boolean: config.boolean || false,
+                    safety: config.safety
+                };
+                
+                // Add stochastic info if this parameter supports it
+                if (config.stochastic && harmonic_ratios_enabled_el.checked) {
+                    const stochasticConfig = ParameterManager.getStochasticConfig();
+                    message.stochastic = {
+                        enabled: true,
+                        config: stochasticConfig[paramName],
+                        forceRegeneration: forceRegeneration
+                    };
+                } else {
+                    message.stochastic = { enabled: false };
+                }
+                
+                // Debug logging for complete power state message
+                if (paramName === "powered_on") {
+                    console.log(`DEBUG: Complete power message being sent:`, message);
+                }
+                
+                peer.channel.send(JSON.stringify(message));
             }
         }
         
@@ -1306,11 +1328,11 @@
             };
             
             // Send discrete parameters immediately
-            send_param("pulseGroupSize", params.pulseGroupSize, "discrete_param");
-            send_param("subGroupSize", params.subGroupSize, "discrete_param");
+            handleParameterChange("pulseGroupSize", params.pulseGroupSize);
+            handleParameterChange("subGroupSize", params.subGroupSize);
             
             // Send continuous stochastic parameter
-            send_param("groupSpacing", params.groupSpacing * 0.001);
+            handleParameterChange("groupSpacing", params.groupSpacing);
             
             // Update discrete parameter displays
             pulse_group_size_el.value = params.pulseGroupSize;
@@ -1374,19 +1396,19 @@
                 cicada_amplitude_value_el.textContent = current.cicadaAmplitude.toFixed(2);
                 
                 // Send parameter updates to synths
-                send_param("clickRate", current.clickRate);
-                send_param("clickDuration", current.clickDuration * 0.001);
-                send_param("clickJitter", current.clickJitter);
-                send_param("noiseAmount", current.noiseAmount);
-                send_param("resonantFreq", current.resonantFreq);
-                send_param("resonantQ", current.resonantQ);
-                send_param("harmonicFreq", current.harmonicFreq);
-                send_param("harmonicQ", current.harmonicQ);
-                send_param("echemeRate", current.echemeRate);
-                send_param("echemeDuration", current.echemeDuration * 0.001);
-                send_param("echemeSpacing", current.echemeSpacing * 0.001);
-                send_param("phraseIntensity", current.phraseIntensity);
-                send_param("amplitude", current.cicadaAmplitude);
+                handleParameterChange("clickRate", current.clickRate);
+                handleParameterChange("clickDuration", current.clickDuration);
+                handleParameterChange("clickJitter", current.clickJitter);
+                handleParameterChange("noiseAmount", current.noiseAmount);
+                handleParameterChange("resonantFreq", current.resonantFreq);
+                handleParameterChange("resonantQ", current.resonantQ);
+                handleParameterChange("harmonicFreq", current.harmonicFreq);
+                handleParameterChange("harmonicQ", current.harmonicQ);
+                handleParameterChange("echemeRate", current.echemeRate);
+                handleParameterChange("echemeDuration", current.echemeDuration);
+                handleParameterChange("echemeSpacing", current.echemeSpacing);
+                handleParameterChange("phraseIntensity", current.phraseIntensity);
+                handleParameterChange("amplitude", current.cicadaAmplitude);
                 
                 // Continue ramping
                 if (progress < 1.0) {

@@ -140,7 +140,8 @@
     </div>
 
     <script type="module">
-        import { PARAM_CONFIG } from './parameter_definitions.js';
+        import { PARAM_CONFIG, ParameterManager } from './parameter_definitions.js';
+        import { StochasticDistributor } from './stochastic_distributor.js';
         
         const synth_id = `synth-${Math.random ().toString (36).substr (2, 9)}`
         let ws = null
@@ -156,6 +157,7 @@
         let cicada_amplitude = 0.0  // store cicada amplitude
         let is_powered_on = true  // track power state
         let instrument_joined = false  // track if user has joined the instrument
+        let stochasticDistributor = null  // client-side stochastic parameter resolver
         
         // webrtc configuration
         let rtc_config = {
@@ -433,6 +435,21 @@
             })
         }
 
+        // request initial parameters from all connected controllers
+        function requestInitialParameters() {
+            console.log("Audio ready - requesting initial parameters from controllers");
+            
+            controllers.forEach((controller, controllerId) => {
+                if (controller.channel && controller.channel.readyState === "open") {
+                    controller.channel.send(JSON.stringify({
+                        type: "request_initial_state",
+                        synth_id: synth_id
+                    }));
+                    console.log(`Requested initial state from ${controllerId}`);
+                }
+            });
+        }
+
         
         // initialize audio
         async function init_audio () {
@@ -484,7 +501,8 @@
             // request wake lock to prevent device sleep
             request_wake_lock ()
             
-            // Audio is ready - controller will send parameters when UI changes occur
+            // request initial parameters from connected controllers
+            requestInitialParameters()
         }
         
         // Unified parameter update handler
@@ -496,11 +514,30 @@
                 return;
             }
 
+            // Initialize stochastic distributor if needed
+            if (!stochasticDistributor) {
+                stochasticDistributor = StochasticDistributor.createForClient(synth_id);
+            }
+
+            // Handle stochastic configuration updates
+            if (data.stochastic) {
+                stochasticDistributor.setEnabled(data.stochastic.enabled);
+                if (data.stochastic.enabled && data.stochastic.config) {
+                    stochasticDistributor.stochasticConfig = { [data.name]: data.stochastic.config };
+                    if (data.stochastic.forceRegeneration) {
+                        stochasticDistributor.clearRatios();
+                    }
+                }
+            }
+
             // Handle special cases
             if (data.name === "powered_on") {
+                console.log(`DEBUG: Synth received power state - data.value: ${data.value}, data.boolean: ${data.boolean}`);
                 is_powered_on = data.value > 0.5;
+                console.log(`DEBUG: Converted to is_powered_on: ${is_powered_on}`);
                 if (gain_node) {
                     gain_node.gain.value = is_powered_on ? 1.0 : 0;
+                    console.log(`DEBUG: Set gain_node.gain.value to: ${gain_node.gain.value}`);
                     console.log(`Power ${is_powered_on ? 'ON' : 'OFF'}`);
                 }
                 return;
@@ -510,6 +547,21 @@
             const param = cicada_node.parameters.get(data.name);
             if (param) {
                 let finalValue = data.value;
+                
+                // Apply stochastic resolution if enabled
+                if (data.stochastic && data.stochastic.enabled && stochasticDistributor.stochasticConfig[data.name]) {
+                    finalValue = stochasticDistributor.resolveParameter(
+                        data.name, 
+                        data.value, 
+                        stochasticDistributor.stochasticConfig
+                    );
+                    console.log(`Stochastic resolution: ${data.name} ${data.value} → ${finalValue}`);
+                }
+                
+                // Apply safety clamping
+                if (data.safety) {
+                    finalValue = ParameterManager.applySafety(finalValue, data.safety);
+                }
                 
                 // Apply integer rounding if needed
                 if (data.integer) {
