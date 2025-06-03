@@ -224,7 +224,7 @@
     </div>
 
     <script type="module">
-        import { PARAM_DEFINITIONS, ParameterManager } from './parameter_definitions.js';
+        import { PARAM_CONFIG, ParameterManager } from './parameter_definitions.js';
         import { StochasticDistributor } from './stochastic_distributor.js';
         
         const controller_id = `ctrl-${Math.random ().toString (36).substr (2, 9)}`
@@ -955,8 +955,8 @@
         // power on/off control
         const power_el = document.getElementById ("power")
         power_el.addEventListener ("change", (e) => {
-            const is_on = e.target.checked
-            send_param("powered_on", is_on, "discrete_param")
+            const value = e.target.checked ? 1 : 0
+            handleParameterChange("powered_on", value)
             saveControllerState()
         })
         
@@ -990,188 +990,203 @@
             
             console.log("Sending initial state to new synth");
             
-            // Get current UI values using parameter manager
-            const baseParams = ParameterManager.getCurrentUIValues();
-            console.log("DEBUG: Base parameters from UI:", baseParams);
+            // Send current parameter values using unified pipeline
+            Object.keys(PARAM_CONFIG).forEach(paramName => {
+                const config = PARAM_CONFIG[paramName];
+                const rawValue = ParameterManager.getElementValue(config.element);
+                if (rawValue !== null) {
+                    distributeParameter(paramName, rawValue, config, synthId);
+                }
+            });
             
-            const stochasticConfig = harmonic_ratios_enabled_el.checked ? 
-                ParameterManager.getStochasticConfig() : null;
-            console.log("DEBUG: Stochastic config:", stochasticConfig);
-            
-            // Send base parameters + stochastic config (let client resolve)
-            const message = {
-                type: "initial_state",
-                client_id: synthId,
-                base_params: baseParams,
-                stochastic_enabled: harmonic_ratios_enabled_el.checked,
-                stochastic_config: stochasticConfig
-            };
-            
-            console.log("DEBUG: Sending message to synth:", message);
-            peer.channel.send(JSON.stringify(message));
             console.log(`Sent initial state to ${synthId}`);
         }
         
         function regenerateHarmonicRatios() {
-            console.log("Sending regenerate command to all connected synths");
+            console.log("Regenerating harmonic ratios for all stochastic parameters");
             
-            // Send regenerate command to all connected synths
-            peers.forEach((peer, synthId) => {
-                if (peer.channel && peer.channel.readyState === "open") {
-                    peer.channel.send(JSON.stringify({
-                        type: "regenerate_ratios",
-                        stochastic_config: harmonic_ratios_enabled_el.checked ? 
-                            ParameterManager.getStochasticConfig() : null
-                    }));
+            // Re-send all stochastic parameters to force regeneration
+            ParameterManager.getStochasticParams().forEach(paramName => {
+                const config = PARAM_CONFIG[paramName];
+                const rawValue = ParameterManager.getElementValue(config.element);
+                if (rawValue !== null) {
+                    handleParameterChange(paramName, rawValue, true); // force regeneration
                 }
             });
             
-            console.log("Regenerate commands sent to all synths");
+            console.log("Harmonic ratios regenerated");
         }
         
-        // simplified parameter sending via single channel
-        function send_param(name, value, type = "param") {
-            peers.forEach ((peer, id) => {
+        // Unified parameter handling pipeline
+        function handleParameterChange(paramName, rawValue, forceRegeneration = false) {
+            const config = PARAM_CONFIG[paramName];
+            if (!config) {
+                console.warn(`Unknown parameter: ${paramName}`);
+                return;
+            }
+            
+            // Update UI display
+            if (config.valueElement) {
+                const displayValue = config.integer ? Math.floor(rawValue) : 
+                                   config.boolean ? (rawValue ? "ON" : "OFF") :
+                                   rawValue.toFixed(2);
+                document.getElementById(config.valueElement).textContent = displayValue;
+            }
+            
+            // Update base value for stochastic parameters
+            if (config.stochastic) {
+                document.getElementById(config.stochastic.baseElement).value = rawValue;
+            }
+            
+            // Distribute to all connected synths
+            peers.forEach((peer, synthId) => {
                 if (peer.channel && peer.channel.readyState === "open") {
-                    peer.channel.send (JSON.stringify ({
-                        type: type,
-                        name: name,
-                        value: value
-                    }))
+                    distributeParameter(paramName, rawValue, config, synthId, forceRegeneration);
                 }
-            })
+            });
         }
         
-        // UDP-like parameters (continuous)
+        function distributeParameter(paramName, rawValue, config, synthId, forceRegeneration = false) {
+            // Apply unit conversion
+            let scaledValue = rawValue * config.unit;
+            
+            // Apply stochastic resolution if enabled
+            if (config.stochastic && harmonic_ratios_enabled_el.checked) {
+                const stochasticConfig = ParameterManager.getStochasticConfig();
+                if (stochasticConfig[paramName]) {
+                    const distributor = StochasticDistributor.createForClient(synthId);
+                    distributor.setEnabled(true);
+                    if (forceRegeneration) {
+                        distributor.clearRatios();
+                    }
+                    scaledValue = distributor.resolveParameter(paramName, scaledValue, stochasticConfig);
+                }
+            }
+            
+            // Apply safety clamping
+            const safeValue = ParameterManager.applySafety(scaledValue, config.safety);
+            
+            // Send to synth with unified message format
+            const peer = peers.get(synthId);
+            if (peer && peer.channel && peer.channel.readyState === "open") {
+                peer.channel.send(JSON.stringify({
+                    type: "param_update",
+                    name: paramName,
+                    value: safeValue,
+                    rampTime: config.rampTime,
+                    integer: config.integer || false,
+                    boolean: config.boolean || false
+                }));
+            }
+        }
+        
+        // Unified event handlers using parameter pipeline
         click_rate_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            click_rate_value_el.textContent = value
-            document.getElementById("click_rate_base").value = value
-            send_param("clickRate", value)
+            handleParameterChange("clickRate", value)
             saveControllerState()
         })
         
         click_duration_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            click_duration_value_el.textContent = value.toFixed(2)
-            send_param("clickDuration", value * 0.001) // Convert ms to seconds
+            handleParameterChange("clickDuration", value)
             saveControllerState()
         })
         
         click_jitter_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            click_jitter_value_el.textContent = value.toFixed(2)
-            send_param("clickJitter", value)
+            handleParameterChange("clickJitter", value)
             saveControllerState()
         })
         
         noise_amount_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            noise_amount_value_el.textContent = value.toFixed(2)
-            send_param("noiseAmount", value)
+            handleParameterChange("noiseAmount", value)
             saveControllerState()
         })
         
         resonant_freq_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            resonant_freq_value_el.textContent = value
-            document.getElementById("resonant_freq_base").value = value
-            send_param("resonantFreq", value)
+            handleParameterChange("resonantFreq", value)
             saveControllerState()
         })
         
         resonant_q_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            resonant_q_value_el.textContent = value
-            send_param("resonantQ", value)
+            handleParameterChange("resonantQ", value)
             saveControllerState()
         })
         
         harmonic_freq_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            harmonic_freq_value_el.textContent = value
-            document.getElementById("harmonic_freq_base").value = value
-            send_param("harmonicFreq", value)
+            handleParameterChange("harmonicFreq", value)
             saveControllerState()
         })
         
         harmonic_q_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            harmonic_q_value_el.textContent = value
-            send_param("harmonicQ", value)
+            handleParameterChange("harmonicQ", value)
             saveControllerState()
         })
         
         echeme_rate_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            echeme_rate_value_el.textContent = value.toFixed(1)
-            document.getElementById("echeme_rate_base").value = value
-            send_param("echemeRate", value)
+            handleParameterChange("echemeRate", value)
             saveControllerState()
         })
         
         echeme_duration_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            echeme_duration_value_el.textContent = value
-            send_param("echemeDuration", value * 0.001) // Convert ms to seconds
+            handleParameterChange("echemeDuration", value)
             saveControllerState()
         })
         
         echeme_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            echeme_spacing_value_el.textContent = value
-            send_param("echemeSpacing", value * 0.001) // Convert ms to seconds
+            handleParameterChange("echemeSpacing", value)
             saveControllerState()
         })
         
         echeme_duration_detune_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            echeme_duration_detune_value_el.textContent = value.toFixed(1)
-            send_param("echemeDurationDetune", value * 0.01) // Convert percentage to decimal
+            handleParameterChange("echemeDurationDetune", value)
             saveControllerState()
         })
         
         echeme_spacing_detune_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            echeme_spacing_detune_value_el.textContent = value.toFixed(1)
-            send_param("echemeSpacingDetune", value * 0.01) // Convert percentage to decimal
+            handleParameterChange("echemeSpacingDetune", value)
             saveControllerState()
         })
         
         phrase_intensity_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            phrase_intensity_value_el.textContent = value.toFixed(1)
-            send_param("phraseIntensity", value)
+            handleParameterChange("phraseIntensity", value)
             saveControllerState()
         })
         
         cicada_amplitude_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            cicada_amplitude_value_el.textContent = value.toFixed (2)
-            send_param("amplitude", value)
+            handleParameterChange("amplitude", value)
             saveControllerState()
         })
         
-        // TCP-like parameters (discrete)
+        // Former discrete parameters (now unified)
         pulse_group_size_el.addEventListener ("input", (e) => {
             const value = parseInt (e.target.value)
-            pulse_group_size_value_el.textContent = value
-            send_param("pulseGroupSize", value, "discrete_param")
+            handleParameterChange("pulseGroupSize", value)
             saveControllerState()
         })
         
         sub_group_size_el.addEventListener ("input", (e) => {
             const value = parseInt (e.target.value)
-            sub_group_size_value_el.textContent = value
-            send_param("subGroupSize", value, "discrete_param")
+            handleParameterChange("subGroupSize", value)
             saveControllerState()
         })
         
         group_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
-            group_spacing_value_el.textContent = value
-            document.getElementById("group_spacing_base").value = value
-            send_param("groupSpacing", value * 0.001) // Convert ms to seconds
+            handleParameterChange("groupSpacing", value)
             saveControllerState()
         })
         
