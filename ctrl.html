@@ -5,222 +5,384 @@
     <meta charset="utf-8">
     <style>
         body {
-            font-family: monospace;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            margin: 0;
+            padding: 0;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-size: 12px;
+            line-height: 1.4;
         }
-        .control {
-            margin: 20px 0;
+        
+        .main-container {
+            display: flex;
+            height: 100vh;
+            gap: 16px;
+            padding: 16px;
+            box-sizing: border-box;
         }
-        label {
+        
+        .controls-container {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        .sidebar {
+            width: 200px;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 12px;
+            overflow-y: auto;
+        }
+        
+        .slider-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 12px;
+        }
+        
+        .system-controls {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .row-title {
+            color: #00ff00;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 8px;
             display: block;
-            margin-bottom: 5px;
-        }
-        input[type="range"] {
             width: 100%;
         }
+        
+        .sidebar h3 {
+            margin: 0 0 8px 0;
+            color: #00ff00;
+            font-size: 12px;
+            font-weight: bold;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+        }
+        
+        .control {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 60px;
+        }
+        
+        .system-controls .control {
+            min-width: auto;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #ccc;
+            font-size: 9px;
+            text-align: center;
+            writing-mode: horizontal-tb;
+            max-width: 60px;
+            word-wrap: break-word;
+        }
+        
+        input[type="range"] {
+            writing-mode: bt-lr; /* IE */
+            -webkit-appearance: slider-vertical; /* WebKit */
+            width: 8px;
+            height: 120px;
+            background: #333;
+            border: none;
+            border-radius: 4px;
+            outline: none;
+            transform: rotate(180deg);
+            margin-bottom: 6px;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 8px;
+            background: #00ff00;
+            border-radius: 2px;
+            cursor: pointer;
+            border: none;
+        }
+        
+        input[type="checkbox"] {
+            margin-right: 6px;
+            accent-color: #00ff00;
+        }
+        
+        button {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 3px;
+            padding: 4px 8px;
+            font-size: 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        
+        button:hover {
+            background: #333;
+            border-color: #00ff00;
+        }
+        
+        .sin-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            margin-top: 4px;
+            font-size: 7px;
+            align-items: center;
+            width: 60px;
+        }
+        
+        .sin-inputs > div {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+        
+        .sin-inputs input {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 2px;
+            padding: 1px 2px;
+            width: 25px;
+            font-size: 7px;
+            font-family: monospace;
+        }
+        
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+        
+        .preset-buttons button {
+            font-size: 9px;
+            padding: 3px 6px;
+        }
+        
         #status {
-            padding: 10px;
-            background: #f0f0f0;
-            border-radius: 4px;
-            margin-bottom: 20px;
+            padding: 6px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            margin-bottom: 8px;
+            font-size: 10px;
         }
-        #synths {
-            margin-top: 20px;
+        
+        .stats {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 6px;
+            margin-bottom: 12px;
+            font-size: 10px;
         }
+        
+        #synth_list {
+            font-size: 10px;
+        }
+        
         .synth {
-            padding: 10px;
-            margin: 5px 0;
-            background: #e0e0e0;
-            border-radius: 4px;
+            padding: 6px;
+            margin: 4px 0;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            font-size: 9px;
         }
+        
         .latency {
             float: right;
-            font-size: 0.8em;
-            color: #666;
+            color: #888;
         }
-        #stats {
-            padding: 10px;
-            background: #f5f5f5;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-        }
-        .stat {
-            display: inline-block;
-            margin-right: 20px;
-        }
+        
         .audio-off {
-            color: #f66;
+            color: #ff6666;
             font-weight: bold;
+        }
+        
+        h4 {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Controller</h1>
+    <div class="main-container">
+        <div class="controls-container">
     
-    <div id="status">Disconnected</div>
+            <div class="system-controls">
+                <div class="control">
+                    <label><input type="checkbox" id="power" checked> Power</label>
+                </div>
+                <div class="control">
+                    <button id="regenerate_ratios">Regenerate Ratios</button>
+                </div>
+                <div class="preset-buttons">
+                    <button id="preset_greengrocer">Greengrocer</button>
+                    <button id="preset_double_drummer">Double Drummer</button>
+                    <button id="preset_typewriter">Typewriter</button>
+                    <button id="preset_redeye">Redeye</button>
+                    <button id="preset_cherry_nose">Cherry Nose</button>
+                </div>
+            </div>
     
-    <div id="stats">
-        <span class="stat">Connected: <strong id="connected_count">0</strong></span>
-        <span class="stat">Avg Latency: <strong id="avg_latency">-</strong></span>
-    </div>
+            <div class="slider-row">
+                <span class="row-title">Click Generation & Filters</span>
+                <div class="control">
+                    <label for="click_rate">Rate <span id="click_rate_value">200</span></label>
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="click_rate_num_sin" value="1-4"></div>
+                        <div>D:<input type="text" id="click_rate_den_sin" value="1-2"></div>
+                    </div>
+                    <input type="range" id="click_rate" min="50" max="800" step="5" value="200">
+                </div>
+                <div class="control">
+                    <label for="click_duration">Duration <span id="click_duration_value">3.0</span></label>
+                    <input type="range" id="click_duration" min="0.01" max="10" step="0.01" value="3.0">
+                </div>
+                <div class="control">
+                    <label for="click_jitter">Jitter <span id="click_jitter_value">0.1</span></label>
+                    <input type="range" id="click_jitter" min="0" max="0.3" step="0.01" value="0.1">
+                </div>
+                <div class="control">
+                    <label for="noise_amount">Noise <span id="noise_amount_value">0.7</span></label>
+                    <input type="range" id="noise_amount" min="0" max="1" step="0.01" value="0.7">
+                </div>
+                <div class="control">
+                    <label for="resonant_freq">Pri Freq <span id="resonant_freq_value">800</span></label>
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="resonant_freq_num_sin" value="1-8"></div>
+                        <div>D:<input type="text" id="resonant_freq_den_sin" value="1-4"></div>
+                    </div>
+                    <input type="range" id="resonant_freq" min="200" max="3000" step="10" value="800">
+                </div>
+                <div class="control">
+                    <label for="resonant_q">Pri Q <span id="resonant_q_value">8</span></label>
+                    <input type="range" id="resonant_q" min="1" max="30" step="0.5" value="8">
+                </div>
+                <div class="control">
+                    <label for="harmonic_freq">Harm Freq <span id="harmonic_freq_value">1600</span></label>
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="harmonic_freq_num_sin" value="1-8"></div>
+                        <div>D:<input type="text" id="harmonic_freq_den_sin" value="1-4"></div>
+                    </div>
+                    <input type="range" id="harmonic_freq" min="400" max="6000" step="10" value="1600">
+                </div>
+                <div class="control">
+                    <label for="harmonic_q">Harm Q <span id="harmonic_q_value">5</span></label>
+                    <input type="range" id="harmonic_q" min="1" max="20" step="0.5" value="5">
+                </div>
+            </div>
     
-    <div id="controller_warning" style="display: none; padding: 10px; background: #ff9800; color: white; border-radius: 4px; margin-bottom: 10px;">
-        ⚠️ Multiple controllers detected - last change wins!
-        <div id="other_controllers" style="font-size: 0.9em; margin-top: 5px;"></div>
-    </div>
-    
-    <div class="control">
-        <label>
-            <input type="checkbox" id="power" checked> Power On/Off
-        </label>
-    </div>
-
-    <h3>Cicada Synthesis</h3>
-    
-    <div class="control">
-        <label>
-            <input type="checkbox" id="harmonic_ratios_enabled" checked> Enable Harmonic Ratio Generator
-        </label>
-        <button id="regenerate_ratios" style="margin-left: 10px;">Regenerate Ratios</button>
-    </div>
-    
-    <h4>Stage 1: Click Generation</h4>
-    
-    <div class="control">
-        <label for="click_rate">Click Rate: <span id="click_rate_value">200</span> Hz</label>
-        <input type="range" id="click_rate" min="50" max="800" step="5" value="200">
-        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
-            <div>Base: <input type="number" id="click_rate_base" value="200" style="width: 60px;"></div>
-            <div>Num: <input type="text" id="click_rate_num_sin" value="1-4" style="width: 60px;"></div>
-            <div>Den: <input type="text" id="click_rate_den_sin" value="1-2" style="width: 60px;"></div>
+            <div class="slider-row">
+                <span class="row-title">Rhythm & Echeme Patterns</span>
+                <div class="control">
+                    <label for="pulse_group_size">Grp Size <span id="pulse_group_size_value">6</span></label>
+                    <input type="range" id="pulse_group_size" min="2" max="12" step="1" value="6">
+                </div>
+                <div class="control">
+                    <label for="sub_group_size">Sub Grp <span id="sub_group_size_value">3</span></label>
+                    <input type="range" id="sub_group_size" min="2" max="6" step="1" value="3">
+                </div>
+                <div class="control">
+                    <label for="group_spacing">Grp Space <span id="group_spacing_value">20</span></label>
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="group_spacing_num_sin" value="1-3"></div>
+                        <div>D:<input type="text" id="group_spacing_den_sin" value="1-2"></div>
+                    </div>
+                    <input type="range" id="group_spacing" min="5" max="100" step="1" value="20">
+                </div>
+                <div class="control">
+                    <label for="echeme_rate">Ech Rate <span id="echeme_rate_value">2.0</span></label>
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="echeme_rate_num_sin" value="2-6"></div>
+                        <div>D:<input type="text" id="echeme_rate_den_sin" value="2-4"></div>
+                    </div>
+                    <input type="range" id="echeme_rate" min="0" max="10" step="0.1" value="2.0">
+                </div>
+                <div class="control">
+                    <label for="echeme_duration">Ech Dur <span id="echeme_duration_value">300</span></label>
+                    <input type="range" id="echeme_duration" min="50" max="2000" step="10" value="300">
+                </div>
+                <div class="control">
+                    <label for="echeme_duration_detune">Dur Det <span id="echeme_duration_detune_value">0</span></label>
+                    <input type="range" id="echeme_duration_detune" min="0" max="2" step="0.1" value="0">
+                </div>
+                <div class="control">
+                    <label for="echeme_spacing">Ech Spc <span id="echeme_spacing_value">200</span></label>
+                    <input type="range" id="echeme_spacing" min="50" max="1000" step="10" value="200">
+                </div>
+                <div class="control">
+                    <label for="echeme_spacing_detune">Spc Det <span id="echeme_spacing_detune_value">0</span></label>
+                    <input type="range" id="echeme_spacing_detune" min="0" max="2" step="0.1" value="0">
+                </div>
+                <div class="control">
+                    <label for="phrase_intensity">Intensity <span id="phrase_intensity_value">1.0</span></label>
+                    <input type="range" id="phrase_intensity" min="0.1" max="2.0" step="0.1" value="1.0">
+                </div>
+                <div class="control">
+                    <label for="cicada_amplitude">Volume <span id="cicada_amplitude_value">0.0</span></label>
+                    <input type="range" id="cicada_amplitude" min="0" max="1" step="0.01" value="0.0">
+                </div>
+            </div>
         </div>
-    </div>
-    
-    <div class="control">
-        <label for="click_duration">Click Duration: <span id="click_duration_value">3.0</span> ms</label>
-        <input type="range" id="click_duration" min="0.01" max="10" step="0.01" value="3.0">
-    </div>
-    
-    <div class="control">
-        <label for="click_jitter">Timing Jitter: <span id="click_jitter_value">0.1</span></label>
-        <input type="range" id="click_jitter" min="0" max="0.3" step="0.01" value="0.1">
-    </div>
-    
-    <div class="control">
-        <label for="noise_amount">Noise Amount: <span id="noise_amount_value">0.7</span></label>
-        <input type="range" id="noise_amount" min="0" max="1" step="0.01" value="0.7">
-    </div>
-    
-    <h4>Stage 2: Resonant Filtering</h4>
-    
-    <div class="control">
-        <label for="resonant_freq">Primary Resonance: <span id="resonant_freq_value">800</span> Hz</label>
-        <input type="range" id="resonant_freq" min="200" max="3000" step="10" value="800">
-        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
-            <div>Base: <input type="number" id="resonant_freq_base" value="800" style="width: 60px;"></div>
-            <div>Num: <input type="text" id="resonant_freq_num_sin" value="1-8" style="width: 60px;"></div>
-            <div>Den: <input type="text" id="resonant_freq_den_sin" value="1-4" style="width: 60px;"></div>
+        
+        <!-- Hidden base value inputs for stochastic calculations -->
+        <input type="hidden" id="click_rate_base" value="200">
+        <input type="hidden" id="resonant_freq_base" value="800">
+        <input type="hidden" id="harmonic_freq_base" value="1600">
+        <input type="hidden" id="group_spacing_base" value="20">
+        <input type="hidden" id="echeme_rate_base" value="2.0">
+        
+        <div class="sidebar">
+</edits>
+            <h3>Cicada Controller</h3>
+            <div id="status">Disconnected</div>
+            
+            <div class="stats">
+                Connected: <strong id="connected_count">0</strong><br>
+                Latency: <strong id="avg_latency">-</strong>
+            </div>
+            
+            <div id="controller_warning" style="display: none; padding: 4px; background: #331100; border: 1px solid #ff6600; border-radius: 2px; margin-bottom: 8px; font-size: 9px;">
+                ⚠️ Multiple controllers detected
+                <div id="other_controllers" style="margin-top: 2px;"></div>
+            </div>
+            
+            <h3>Connected Synths</h3>
+            <div id="synth_list">None connected</div>
         </div>
-    </div>
-    
-    <div class="control">
-        <label for="resonant_q">Resonance Q: <span id="resonant_q_value">8</span></label>
-        <input type="range" id="resonant_q" min="1" max="30" step="0.5" value="8">
-    </div>
-    
-    <div class="control">
-        <label for="harmonic_freq">Harmonic Resonance: <span id="harmonic_freq_value">1600</span> Hz</label>
-        <input type="range" id="harmonic_freq" min="400" max="6000" step="10" value="1600">
-        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
-            <div>Base: <input type="number" id="harmonic_freq_base" value="1600" style="width: 60px;"></div>
-            <div>Num: <input type="text" id="harmonic_freq_num_sin" value="1-8" style="width: 60px;"></div>
-            <div>Den: <input type="text" id="harmonic_freq_den_sin" value="1-4" style="width: 60px;"></div>
-        </div>
-    </div>
-    
-    <div class="control">
-        <label for="harmonic_q">Harmonic Q: <span id="harmonic_q_value">5</span></label>
-        <input type="range" id="harmonic_q" min="1" max="20" step="0.5" value="5">
-    </div>
-    
-    <h4>Rhythmic Structure</h4>
-    
-    <div class="control">
-        <label for="pulse_group_size">Pulse Group Size: <span id="pulse_group_size_value">6</span></label>
-        <input type="range" id="pulse_group_size" min="2" max="12" step="1" value="6">
-    </div>
-    
-    <div class="control">
-        <label for="sub_group_size">Sub-Group Size: <span id="sub_group_size_value">3</span></label>
-        <input type="range" id="sub_group_size" min="2" max="6" step="1" value="3">
-    </div>
-    
-    <div class="control">
-        <label for="group_spacing">Group Spacing: <span id="group_spacing_value">20</span> ms</label>
-        <input type="range" id="group_spacing" min="5" max="100" step="1" value="20">
-        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
-            <div>Base: <input type="number" id="group_spacing_base" value="20" style="width: 60px;"></div>
-            <div>Num: <input type="text" id="group_spacing_num_sin" value="1-3" style="width: 60px;"></div>
-            <div>Den: <input type="text" id="group_spacing_den_sin" value="1-2" style="width: 60px;"></div>
-        </div>
-    </div>
-    
-    <div class="control">
-        <label for="echeme_rate">Echeme Rate: <span id="echeme_rate_value">2.0</span> Hz</label>
-        <input type="range" id="echeme_rate" min="0" max="10" step="0.1" value="2.0">
-        <div style="display: flex; gap: 10px; margin-top: 5px; font-size: 12px;">
-            <div>Base: <input type="number" id="echeme_rate_base" value="2.0" step="0.1" style="width: 60px;"></div>
-            <div>Num: <input type="text" id="echeme_rate_num_sin" value="2-6" style="width: 60px;"></div>
-            <div>Den: <input type="text" id="echeme_rate_den_sin" value="2-4" style="width: 60px;"></div>
-        </div>
-    </div>
-    
-    <div class="control">
-        <label for="echeme_duration">Echeme Duration: <span id="echeme_duration_value">300</span> ms</label>
-        <input type="range" id="echeme_duration" min="50" max="2000" step="10" value="300">
-    </div>
-    
-    <div class="control">
-        <label for="echeme_duration_detune">Duration Detune Width: <span id="echeme_duration_detune_value">0</span>%</label>
-        <input type="range" id="echeme_duration_detune" min="0" max="2" step="0.1" value="0">
-    </div>
-    
-    <div class="control">
-        <label for="echeme_spacing">Echeme Spacing: <span id="echeme_spacing_value">200</span> ms</label>
-        <input type="range" id="echeme_spacing" min="50" max="1000" step="10" value="200">
-    </div>
-    
-    <div class="control">
-        <label for="echeme_spacing_detune">Spacing Detune Width: <span id="echeme_spacing_detune_value">0</span>%</label>
-        <input type="range" id="echeme_spacing_detune" min="0" max="2" step="0.1" value="0">
-    </div>
-    
-    <div class="control">
-        <label for="phrase_intensity">Phrase Intensity: <span id="phrase_intensity_value">1.0</span></label>
-        <input type="range" id="phrase_intensity" min="0.1" max="2.0" step="0.1" value="1.0">
-    </div>
-    
-    <div class="control">
-        <label for="cicada_amplitude">Cicada Volume: <span id="cicada_amplitude_value">0.0</span></label>
-        <input type="range" id="cicada_amplitude" min="0" max="1" step="0.01" value="0.0">
-    </div>
-
-    <h3>Australian Species Presets</h3>
-    
-    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 15px 0;">
-        <button id="preset_greengrocer" style="padding: 8px 12px;">Greengrocer</button>
-        <button id="preset_double_drummer" style="padding: 8px 12px;">Double Drummer</button>
-        <button id="preset_typewriter" style="padding: 8px 12px;">Typewriter</button>
-        <button id="preset_redeye" style="padding: 8px 12px;">Redeye</button>
-        <button id="preset_cherry_nose" style="padding: 8px 12px;">Cherry Nose</button>
-    </div>
-    
-    <div id="synths">
-        <h3>Available Synths</h3>
-        <div id="synth_list">None connected</div>
     </div>
 
     <script type="module">
@@ -255,8 +417,7 @@
         const status_el = document.getElementById ("status")
         const synth_list_el = document.getElementById ("synth_list")
         
-        // harmonic ratio generator
-        const harmonic_ratios_enabled_el = document.getElementById ("harmonic_ratios_enabled")
+        // harmonic ratio generator (always enabled)
         
 
         
@@ -312,7 +473,7 @@
             const state = {
                 // Power and harmonic ratios
                 power: power_el.checked,
-                harmonic_ratios_enabled: harmonic_ratios_enabled_el.checked,
+                harmonic_ratios_enabled: true,
                 
                 // Main sliders
                 click_rate: parseFloat(click_rate_el.value),
@@ -374,7 +535,6 @@
                 
                 // Apply power and harmonic ratios
                 power_el.checked = state.power !== undefined ? state.power : true;
-                harmonic_ratios_enabled_el.checked = state.harmonic_ratios_enabled !== undefined ? state.harmonic_ratios_enabled : true;
                 
                 // Apply main sliders
                 if (state.click_rate !== undefined) {
@@ -1082,7 +1242,7 @@
                 };
                 
                 // Add stochastic info if this parameter supports it
-                if (config.stochastic && harmonic_ratios_enabled_el.checked) {
+                if (config.stochastic) {
                     const stochasticConfig = ParameterManager.getStochasticConfig();
                     message.stochastic = {
                         enabled: true,
@@ -1105,6 +1265,7 @@
         // Unified event handlers using parameter pipeline
         click_rate_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            document.getElementById("click_rate_base").value = value
             handleParameterChange("clickRate", value)
             saveControllerState()
         })
@@ -1129,6 +1290,7 @@
         
         resonant_freq_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            document.getElementById("resonant_freq_base").value = value
             handleParameterChange("resonantFreq", value)
             saveControllerState()
         })
@@ -1141,6 +1303,7 @@
         
         harmonic_freq_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            document.getElementById("harmonic_freq_base").value = value
             handleParameterChange("harmonicFreq", value)
             saveControllerState()
         })
@@ -1153,6 +1316,7 @@
         
         echeme_rate_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            document.getElementById("echeme_rate_base").value = value
             handleParameterChange("echemeRate", value)
             saveControllerState()
         })
@@ -1208,6 +1372,7 @@
         
         group_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            document.getElementById("group_spacing_base").value = value
             handleParameterChange("groupSpacing", value)
             saveControllerState()
         })
@@ -1264,8 +1429,7 @@
         document.getElementById("group_spacing_base").addEventListener("change", saveControllerState)
         document.getElementById("echeme_rate_base").addEventListener("change", saveControllerState)
         
-        // Harmonic ratios enabled checkbox
-        harmonic_ratios_enabled_el.addEventListener("change", saveControllerState)
+        // Harmonic ratios always enabled (no toggle)
 
         // initialize UI to default values (override browser memory)
         power_el.checked = true
