@@ -33,22 +33,7 @@
 
 
 
-        h1 {
-            position: fixed;
-            left: 20px;
-            top: 50%;
-            transform: translateY(-50%) rotate(-90deg);
-            transform-origin: center;
-            font-size: 18px;
-            color: var(--cicada-green);
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            font-weight: bold;
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            z-index: 100;
-            white-space: nowrap;
-        }
+
 
         #status {
             position: fixed;
@@ -81,14 +66,14 @@
 
         .param {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 16px;
-            background: var(--dark-green);
-            border: 1px solid var(--cicada-green);
-            border-radius: 4px;
+            top: 20px;
+            left: 20px;
             font-size: 12px;
             z-index: 100;
+            color: var(--cicada-green);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         button {
@@ -203,31 +188,25 @@
 
         #controllers {
             position: fixed;
-            bottom: 80px;
-            right: 20px;
-            background: var(--dark-green);
-            border: 1px solid rgba(127, 176, 105, 0.3);
-            border-radius: 4px;
-            padding: 16px;
+            bottom: 20px;
+            left: 20px;
             z-index: 100;
             max-width: 200px;
         }
 
         #controllers h3 {
-            margin: 0 0 16px 0;
+            margin: 0 0 8px 0;
             color: var(--cicada-green);
-            font-size: 14px;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
+            font-weight: bold;
         }
 
         #controller_list {
-            padding: 8px;
-            background: var(--deep-black);
-            border: 1px solid rgba(127, 176, 105, 0.2);
-            border-radius: 4px;
             font-family: 'Courier New', monospace;
             font-size: 11px;
+            color: rgba(244, 241, 232, 0.8);
         }
 
         /* Mobile-first responsive design */
@@ -255,17 +234,17 @@
     </style>
 </head>
 <body>
-    <h1>🦗 Cicada Synth</h1>
+
     
     <div id="status">Disconnected</div>
     
-    <div id="controllers" style="margin-top: 20px;">
-        <h3>🎛️ Connected Controllers</h3>
-        <div id="controller_list"></div>None</div>
+    <div id="controllers">
+        <h3>Controllers</h3>
+        <div id="controller_list">None</div>
     </div>
     
-    <div id="audio_hint">🔊 Activate Biological Sound Engine</div>
-    <button id="start_audio">🦗 Emerge from Silence</button>
+    <div id="audio_hint">Activate Biological Sound Engine</div>
+    <button id="start_audio">Emerge from Silence</button>
     
     <div id="calibration_phase" style="display: none;">
         <h3>🎵 Cicada Calibration</h3>
@@ -281,7 +260,7 @@
     <canvas id="visualizer" class="dimmed"></canvas>
     
     <div id="params" class="dimmed">
-        <div class="param">🎵 Biological Audio Engine Status</div>
+        <div class="param" id="audio_status_indicator">Synthesis Engine: Inactive</div>
     </div>
 
     <script type="module">
@@ -640,6 +619,13 @@
             document.getElementById ("visualizer").classList.remove ("dimmed")
             document.getElementById ("params").classList.remove ("dimmed")
             
+            // hide center audio controls
+            document.getElementById ("start_audio").style.display = "none"
+            document.getElementById ("audio_hint").style.display = "none"
+            
+            // update audio status indicator
+            document.getElementById ("audio_status_indicator").textContent = "Synthesis Engine: Running"
+            
             // start visualizer
             draw_visualizer ()
             
@@ -777,13 +763,7 @@
                 }
             }
             
-            // cicada body line
-            ctx.strokeStyle = "#E76F51"
-            ctx.lineWidth = 2
-            ctx.beginPath()
-            ctx.moveTo(center_x, center_y - wing_height/2)
-            ctx.lineTo(center_x, center_y + wing_height/2)
-            ctx.stroke()
+
         }
 
         
