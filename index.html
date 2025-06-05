@@ -1,134 +1,279 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Synth - Minimal Distributed Synth</title>
+    <title>Cicada Synth - Biological Sound Engine</title>
     <meta charset="utf-8">
     <style>
+        :root {
+            --dark-green: #2D4A32;
+            --cicada-green: #7FB069;
+            --burnt-orange: #E76F51;
+            --deep-black: #0F0F0F;
+            --warm-black: #1A1A1A;
+            --soft-white: #F4F1E8;
+            --cicada-glow: rgba(127, 176, 105, 0.3);
+            --orange-glow: rgba(231, 111, 81, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: monospace;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
-            background: #1a1a1a;
-            color: #f0f0f0;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: var(--deep-black);
+            color: var(--soft-white);
+            height: 100vh;
+            font-size: 14px;
+            line-height: 1.4;
+            overflow: hidden;
         }
+
+
+
+        h1 {
+            position: fixed;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            transform-origin: center;
+            font-size: 18px;
+            color: var(--cicada-green);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: bold;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            z-index: 100;
+            white-space: nowrap;
+        }
+
         #status {
-            padding: 10px;
-            background: #333;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            background: var(--dark-green);
+            border: 1px solid var(--cicada-green);
             border-radius: 4px;
-            margin-bottom: 20px;
+            font-weight: bold;
+            z-index: 100;
+            font-size: 12px;
         }
+
         #visualizer {
-            width: 100%;
-            height: 200px;
-            background: #000;
-            border-radius: 4px;
-            margin: 20px 0;
-            transition: opacity 0.3s;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: var(--deep-black);
+            margin: 0;
+            transition: opacity 0.4s ease;
+            z-index: 1;
         }
+
         #visualizer.dimmed {
             opacity: 0.3;
         }
+
         .param {
-            padding: 10px;
-            margin: 10px 0;
-            background: #2a2a2a;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            background: var(--dark-green);
+            border: 1px solid var(--cicada-green);
             border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
         }
+
         button {
-            padding: 10px 20px;
-            background: #444;
-            border: none;
-            color: white;
+            padding: 12px 24px;
+            background: var(--burnt-orange);
+            border: 1px solid var(--burnt-orange);
+            color: var(--soft-white);
             border-radius: 4px;
             cursor: pointer;
-            font-family: monospace;
+            font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
         }
+
         button:hover {
-            background: #555;
+            background: #F2825A;
+            border-color: var(--soft-white);
         }
+
         #start_audio {
-            display: block;
-            margin: 30px auto;
-            padding: 15px 30px;
-            background: #c44;
-            font-size: 16px;
-            animation: pulse 2s infinite;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            background: var(--cicada-green);
+            font-size: 18px;
+            border: 2px solid var(--soft-white);
+            z-index: 200;
         }
+
         #start_audio:hover {
-            background: #d55;
+            background: #8FC274;
         }
+
         #start_audio:disabled {
-            animation: none;
             background: #444;
             opacity: 0.5;
+            border-color: #666;
         }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.8; }
-        }
+
+
+
         #audio_hint {
-            text-align: center;
-            color: #888;
-            font-size: 14px;
-            margin-bottom: 10px;
+            position: fixed;
+            top: calc(50% - 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(244, 241, 232, 0.7);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            z-index: 200;
         }
+
         .dimmed {
-            opacity: 0.3;
-            transition: opacity 0.3s;
+            opacity: 0.4;
+            transition: opacity 0.4s ease;
         }
+
         #calibration_phase {
-            background: #2a2a2a;
-            border-radius: 4px;
-            padding: 20px;
-            margin: 20px 0;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--dark-green);
+            border: 2px solid var(--cicada-green);
+            border-radius: 8px;
+            padding: 24px;
             text-align: center;
+            z-index: 200;
+            max-width: 400px;
         }
+
+        #calibration_phase h3 {
+            color: var(--cicada-green);
+            margin-top: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
         #join_instrument {
-            background: #4a8;
-            margin: 20px auto;
-            padding: 15px 30px;
+            background: var(--cicada-green);
+            margin: 24px auto;
+            padding: 16px 32px;
             font-size: 16px;
             display: none;
         }
+
         #join_instrument:hover {
-            background: #5b9;
+            background: #8FC274;
         }
+
         #audio_verification {
-            margin: 15px 0;
-            padding: 10px;
-            background: #333;
+            margin: 16px 0;
+            padding: 16px;
+            background: var(--deep-black);
+            border: 1px solid rgba(127, 176, 105, 0.3);
             border-radius: 4px;
-            font-size: 14px;
+            font-size: 13px;
         }
+
         .verification_good {
-            color: #4a8;
+            color: var(--cicada-green);
         }
+
         .verification_warning {
-            color: #fa4;
+            color: var(--burnt-orange);
         }
+
+        #controllers {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--dark-green);
+            border: 1px solid rgba(127, 176, 105, 0.3);
+            border-radius: 4px;
+            padding: 16px;
+            z-index: 100;
+            max-width: 200px;
+        }
+
+        #controllers h3 {
+            margin: 0 0 16px 0;
+            color: var(--cicada-green);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #controller_list {
+            padding: 8px;
+            background: var(--deep-black);
+            border: 1px solid rgba(127, 176, 105, 0.2);
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        /* Mobile-first responsive design */
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            
+            h1 {
+                font-size: 20px;
+                margin: 16px 0 24px 0;
+            }
+            
+            #visualizer {
+                height: 220px;
+            }
+            
+            #start_audio {
+                padding: 16px 32px;
+                font-size: 16px;
+            }
+        }
+
+
     </style>
 </head>
 <body>
-    <h1>Synth</h1>
+    <h1>🦗 Cicada Synth</h1>
     
     <div id="status">Disconnected</div>
     
     <div id="controllers" style="margin-top: 20px;">
-        <h3>Connected Controllers</h3>
-        <div id="controller_list" style="padding: 10px; background: #2a2a2a; border-radius: 4px;">None</div>
+        <h3>🎛️ Connected Controllers</h3>
+        <div id="controller_list"></div>None</div>
     </div>
     
-    <div id="audio_hint">Click to enable audio engine</div>
-    <button id="start_audio">Start Audio</button>
+    <div id="audio_hint">🔊 Activate Biological Sound Engine</div>
+    <button id="start_audio">🦗 Emerge from Silence</button>
     
     <div id="calibration_phase" style="display: none;">
-        <h3>Audio Calibration</h3>
-        <p>Adjust your device volume while listening to the pink noise test signal.</p>
+        <h3>🎵 Cicada Calibration</h3>
+        <p>Adjust your device volume for optimal cicada chorus experience.</p>
         <div id="audio_verification">
             <div id="audio_status">🔊 Audio output detected</div>
         </div>
-        <button id="join_instrument">Join Cicada Instrument</button>
+        <button id="join_instrument">🌿 Join the Chorus</button>
     </div>
     
 
@@ -136,7 +281,7 @@
     <canvas id="visualizer" class="dimmed"></canvas>
     
     <div id="params" class="dimmed">
-        <div class="param">Audio Status</div>
+        <div class="param">🎵 Biological Audio Engine Status</div>
     </div>
 
     <script type="module">
@@ -606,22 +751,39 @@
                 }
             }
             
-            // draw spectrum
-            ctx.fillStyle = "rgb(0, 0, 0)"
-            ctx.fillRect (0, 0, canvas.width, canvas.height)
+            // clear canvas
+            ctx.fillStyle = "#0F0F0F"
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
             
-            const bar_width = (canvas.width / buffer_length) * 2.5
-            let bar_height
-            let x = 0
+            const center_x = canvas.width / 2
+            const center_y = canvas.height / 2
+            const wing_height = canvas.height * 0.8
+            const max_wing_width = canvas.width * 0.4
             
+            // draw cicada wings - frequency mapped to Y, amplitude to X
             for (let i = 0; i < buffer_length; i++) {
-                bar_height = (data_array[i] / 255) * canvas.height
+                const frequency_ratio = i / buffer_length
+                const y = center_y - (wing_height / 2) + (frequency_ratio * wing_height)
+                const amplitude = data_array[i] / 255
+                const wing_spread = amplitude * max_wing_width
                 
-                ctx.fillStyle = `rgb(${bar_height + 100}, 50, 50)`
-                ctx.fillRect (x, canvas.height - bar_height, bar_width, bar_height)
-                
-                x += bar_width + 1
+                if (amplitude > 0.05) {
+                    // left wing
+                    ctx.fillStyle = "#7FB069"
+                    ctx.fillRect(center_x - wing_spread, y, wing_spread, 2)
+                    
+                    // right wing
+                    ctx.fillRect(center_x, y, wing_spread, 2)
+                }
             }
+            
+            // cicada body line
+            ctx.strokeStyle = "#E76F51"
+            ctx.lineWidth = 2
+            ctx.beginPath()
+            ctx.moveTo(center_x, center_y - wing_height/2)
+            ctx.lineTo(center_x, center_y + wing_height/2)
+            ctx.stroke()
         }
 
         
@@ -692,6 +854,10 @@
             
             // update status display
             status_el.innerHTML = status_el.innerHTML.replace("🔊", "🎵")
+            
+            // activate cicada visual state
+            document.body.classList.add("cicada-active")
+            canvas.classList.remove("dimmed")
             
             console.log("Joined cicada instrument - controller has full control")
         })

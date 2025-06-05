@@ -4,208 +4,323 @@
     <title>Controller - Minimal Distributed Synth</title>
     <meta charset="utf-8">
     <style>
+        :root {
+            --cicada-green: #7FB069;
+            --jungle-orange: #F4A261;
+            --cream-white: #FDF6E3;
+            --soft-green: #A8C686;
+            --muted-orange: #E76F51;
+            --warm-cream: #F2EAD3;
+            --shadow: rgba(127, 176, 105, 0.15);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+            font-family: 'Helvetica Neue', 'Arial', sans-serif;
             margin: 0;
-            padding: 0;
-            background: #0a0a0a;
-            color: #e0e0e0;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--cream-white) 0%, var(--warm-cream) 100%);
+            color: #5A5A5A;
             font-size: 12px;
             line-height: 1.4;
+            min-height: 100vh;
         }
         
         .main-container {
             display: flex;
-            height: 100vh;
-            gap: 16px;
-            padding: 16px;
-            box-sizing: border-box;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 24px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px var(--shadow);
+            backdrop-filter: blur(10px);
+            flex-wrap: wrap;
         }
+        
+
         
         .controls-container {
             flex: 1;
-            overflow-y: auto;
             display: flex;
-            flex-direction: column;
-            gap: 16px;
+            flex-direction: row;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-aspect-ratio: 1/1) {
+            .controls-container {
+                flex-direction: column;
+            }
         }
         
         .sidebar {
-            width: 200px;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 12px;
-            overflow-y: auto;
+            width: 240px;
+            background: linear-gradient(145deg, var(--cicada-green), var(--soft-green));
+            border-radius: 12px;
+            padding: 20px;
+            color: var(--cream-white);
+            box-shadow: 0 4px 16px var(--shadow);
+            flex-shrink: 0;
         }
         
+
+        
         .slider-row {
-            display: flex;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
             gap: 8px;
-            align-items: flex-end;
-            justify-content: flex-start;
-            flex-wrap: wrap;
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 12px;
+            background: linear-gradient(145deg, rgba(244, 162, 97, 0.08), rgba(231, 111, 81, 0.08));
+            border: 2px solid rgba(244, 162, 97, 0.3);
+            border-radius: 12px;
+            padding: 24px 16px 16px 16px;
+            box-shadow: inset 0 2px 8px rgba(244, 162, 97, 0.1);
+            position: relative;
+            flex: 1;
+            min-width: 0;
+            width: 100%;
+            max-width: 500px;
         }
         
         .system-controls {
-            background: #111;
-            border: 1px solid #333;
-            border-radius: 6px;
-            padding: 12px;
+            background: linear-gradient(145deg, var(--jungle-orange), var(--muted-orange));
+            border-radius: 12px;
+            padding: 20px;
             display: flex;
             align-items: center;
-            gap: 16px;
+            justify-content: space-between;
+            gap: 20px;
+            color: var(--cream-white);
+            box-shadow: 0 4px 16px rgba(244, 162, 97, 0.3);
         }
         
         .row-title {
-            color: #00ff00;
-            font-size: 11px;
+            position: absolute;
+            top: 8px;
+            left: 16px;
+            color: var(--muted-orange);
+            font-size: 10px;
             font-weight: bold;
-            margin-bottom: 8px;
-            display: block;
-            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            background: var(--cream-white);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(244, 162, 97, 0.3);
         }
         
         .sidebar h3 {
-            margin: 0 0 8px 0;
-            color: #00ff00;
-            font-size: 12px;
+            margin: 0 0 16px 0;
+            color: var(--cream-white);
+            font-size: 14px;
             font-weight: bold;
-            border-bottom: 1px solid #333;
-            padding-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 2px solid rgba(253, 246, 227, 0.3);
+            padding-bottom: 8px;
         }
         
         .control {
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 60px;
+            justify-content: center;
+            text-align: center;
+            min-width: 0;
+            padding: 8px 4px;
+            background: rgba(253, 246, 227, 0.15);
+            border-radius: 8px;
+            border: 1px solid rgba(127, 176, 105, 0.2);
+            transition: all 0.2s ease;
+            overflow: hidden;
+        }
+        
+        .control:hover {
+            background: rgba(253, 246, 227, 0.25);
+            border-color: var(--cicada-green);
+            transform: translateY(-1px);
         }
         
         .system-controls .control {
             min-width: auto;
+            height: auto;
+        }
+        
+        .control-label {
+            color: #5A5A5A;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+        
+        .control-value {
+            background: var(--cicada-green);
+            color: var(--cream-white);
+            font-size: 12px;
+            font-weight: bold;
+            padding: 3px 6px;
+            border-radius: 4px;
+            min-width: 40px;
+            margin-bottom: 6px;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+            font-family: 'Courier New', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         
         label {
             display: block;
-            margin-bottom: 6px;
-            color: #ccc;
-            font-size: 9px;
+            margin-bottom: 12px;
+            color: #5A5A5A;
+            font-size: 11px;
             text-align: center;
-            writing-mode: horizontal-tb;
-            max-width: 60px;
-            word-wrap: break-word;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+            min-height: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .system-controls label {
+            color: var(--cream-white);
+            font-weight: bold;
         }
         
         input[type="range"] {
-            writing-mode: bt-lr; /* IE */
-            -webkit-appearance: slider-vertical; /* WebKit */
-            width: 8px;
-            height: 120px;
-            background: #333;
+            -webkit-appearance: none;
+            appearance: none;
+            width: 90%;
+            max-width: 80px;
+            height: 5px;
+            background: linear-gradient(90deg, rgba(127, 176, 105, 0.3), var(--cicada-green));
             border: none;
-            border-radius: 4px;
+            border-radius: 3px;
             outline: none;
-            transform: rotate(180deg);
-            margin-bottom: 6px;
+            margin: 8px 0;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
         }
         
         input[type="range"]::-webkit-slider-thumb {
             appearance: none;
-            width: 16px;
-            height: 8px;
-            background: #00ff00;
-            border-radius: 2px;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(145deg, var(--cicada-green), var(--soft-green));
+            border-radius: 9px;
             cursor: pointer;
+            box-shadow: 0 3px 8px rgba(127, 176, 105, 0.4);
+            border: 3px solid var(--cream-white);
+            transition: all 0.1s ease;
         }
         
         input[type="range"]::-moz-range-thumb {
-            width: 16px;
-            height: 8px;
-            background: #00ff00;
-            border-radius: 2px;
+            width: 18px;
+            height: 18px;
+            background: linear-gradient(145deg, var(--cicada-green), var(--soft-green));
+            border-radius: 9px;
             cursor: pointer;
-            border: none;
+            border: 3px solid var(--cream-white);
+            box-shadow: 0 3px 8px rgba(127, 176, 105, 0.4);
         }
         
         input[type="checkbox"] {
-            margin-right: 6px;
-            accent-color: #00ff00;
+            margin-right: 8px;
+            accent-color: var(--cream-white);
+            transform: scale(1.2);
         }
         
         button {
-            background: #222;
-            color: #e0e0e0;
-            border: 1px solid #444;
-            border-radius: 3px;
-            padding: 4px 8px;
-            font-size: 10px;
+            background: linear-gradient(145deg, rgba(253, 246, 227, 0.9), var(--warm-cream));
+            color: #5A5A5A;
+            border: 2px solid rgba(127, 176, 105, 0.3);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 9px;
             cursor: pointer;
             font-family: inherit;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s ease;
         }
         
         button:hover {
-            background: #333;
-            border-color: #00ff00;
+            background: linear-gradient(145deg, var(--cicada-green), var(--soft-green));
+            color: var(--cream-white);
+            border-color: var(--cream-white);
+            box-shadow: 0 4px 12px var(--shadow);
+            transform: translateY(-1px);
         }
         
         .sin-inputs {
             display: flex;
-            flex-direction: column;
-            gap: 1px;
+            flex-direction: row;
+            gap: 2px;
             margin-top: 4px;
             font-size: 7px;
             align-items: center;
-            width: 60px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
         
         .sin-inputs > div {
             display: flex;
             align-items: center;
-            gap: 2px;
+            gap: 3px;
         }
         
         .sin-inputs input {
-            background: #222;
-            color: #e0e0e0;
-            border: 1px solid #444;
-            border-radius: 2px;
-            padding: 1px 2px;
-            width: 25px;
+            background: rgba(253, 246, 227, 0.9);
+            color: #5A5A5A;
+            border: 1px solid rgba(127, 176, 105, 0.5);
+            border-radius: 3px;
+            padding: 2px 3px;
+            width: 24px;
             font-size: 7px;
-            font-family: monospace;
+            font-family: inherit;
+            text-align: center;
         }
         
         .preset-buttons {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 6px;
         }
         
         .preset-buttons button {
             font-size: 9px;
-            padding: 3px 6px;
+            padding: 8px 12px;
+            min-width: 80px;
         }
         
         #status {
-            padding: 6px;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 3px;
-            margin-bottom: 8px;
+            padding: 12px;
+            background: rgba(253, 246, 227, 0.2);
+            border: 2px solid rgba(253, 246, 227, 0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
             font-size: 10px;
+            font-weight: bold;
         }
         
         .stats {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 3px;
-            padding: 6px;
-            margin-bottom: 12px;
+            background: rgba(253, 246, 227, 0.2);
+            border: 2px solid rgba(253, 246, 227, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
             font-size: 10px;
         }
         
@@ -214,26 +329,42 @@
         }
         
         .synth {
-            padding: 6px;
-            margin: 4px 0;
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 3px;
+            padding: 8px;
+            margin: 6px 0;
+            background: rgba(253, 246, 227, 0.2);
+            border: 1px solid rgba(253, 246, 227, 0.3);
+            border-radius: 6px;
             font-size: 9px;
         }
         
         .latency {
             float: right;
-            color: #888;
+            color: rgba(253, 246, 227, 0.7);
         }
         
         .audio-off {
-            color: #ff6666;
+            color: var(--muted-orange);
             font-weight: bold;
         }
         
         h4 {
             display: none;
+        }
+        
+        /* VHS-inspired grain effect */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(127, 176, 105, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(244, 162, 97, 0.05) 0%, transparent 50%),
+                linear-gradient(45deg, transparent 48%, rgba(253, 246, 227, 0.02) 49%, rgba(253, 246, 227, 0.02) 51%, transparent 52%);
+            pointer-events: none;
+            z-index: -1;
         }
     </style>
 </head>
@@ -260,100 +391,126 @@
             <div class="slider-row">
                 <span class="row-title">Click Generation & Filters</span>
                 <div class="control">
-                    <label for="click_rate">Rate <span id="click_rate_value">200</span></label>
-                    <div class="sin-inputs">
-                        <div>N:<input type="text" id="click_rate_num_sin" value="1-4"></div>
-                        <div>D:<input type="text" id="click_rate_den_sin" value="1-2"></div>
-                    </div>
+                    <div class="control-label">Rate</div>
+                    <div class="control-value" id="click_rate_value">200</div>
                     <input type="range" id="click_rate" min="50" max="800" step="5" value="200">
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="click_rate_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="click_rate_den_sin" value="1"></div>
+                    </div>
                 </div>
                 <div class="control">
-                    <label for="click_duration">Duration <span id="click_duration_value">3.0</span></label>
+                    <div class="control-label">Duration</div>
+                    <div class="control-value" id="click_duration_value">3.0</div>
                     <input type="range" id="click_duration" min="0.01" max="10" step="0.01" value="3.0">
                 </div>
                 <div class="control">
-                    <label for="click_jitter">Jitter <span id="click_jitter_value">0.1</span></label>
+                    <div class="control-label">Jitter</div>
+                    <div class="control-value" id="click_jitter_value">0.1</div>
                     <input type="range" id="click_jitter" min="0" max="0.3" step="0.01" value="0.1">
                 </div>
                 <div class="control">
-                    <label for="noise_amount">Noise <span id="noise_amount_value">0.7</span></label>
+                    <div class="control-label">Noise</div>
+                    <div class="control-value" id="noise_amount_value">0.7</div>
                     <input type="range" id="noise_amount" min="0" max="1" step="0.01" value="0.7">
                 </div>
                 <div class="control">
-                    <label for="resonant_freq">Pri Freq <span id="resonant_freq_value">800</span></label>
-                    <div class="sin-inputs">
-                        <div>N:<input type="text" id="resonant_freq_num_sin" value="1-8"></div>
-                        <div>D:<input type="text" id="resonant_freq_den_sin" value="1-4"></div>
-                    </div>
+                    <div class="control-label">Primary Freq</div>
+                    <div class="control-value" id="resonant_freq_value">800</div>
                     <input type="range" id="resonant_freq" min="200" max="3000" step="10" value="800">
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="resonant_freq_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="resonant_freq_den_sin" value="1"></div>
+                    </div>
                 </div>
                 <div class="control">
-                    <label for="resonant_q">Pri Q <span id="resonant_q_value">8</span></label>
+                    <div class="control-label">Primary Q</div>
+                    <div class="control-value" id="resonant_q_value">8</div>
                     <input type="range" id="resonant_q" min="1" max="30" step="0.5" value="8">
                 </div>
                 <div class="control">
-                    <label for="harmonic_freq">Harm Freq <span id="harmonic_freq_value">1600</span></label>
-                    <div class="sin-inputs">
-                        <div>N:<input type="text" id="harmonic_freq_num_sin" value="1-8"></div>
-                        <div>D:<input type="text" id="harmonic_freq_den_sin" value="1-4"></div>
-                    </div>
+                    <div class="control-label">Harmonic Freq</div>
+                    <div class="control-value" id="harmonic_freq_value">1600</div>
                     <input type="range" id="harmonic_freq" min="400" max="6000" step="10" value="1600">
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="harmonic_freq_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="harmonic_freq_den_sin" value="1"></div>
+                    </div>
                 </div>
                 <div class="control">
-                    <label for="harmonic_q">Harm Q <span id="harmonic_q_value">5</span></label>
+                    <div class="control-label">Harmonic Q</div>
+                    <div class="control-value" id="harmonic_q_value">5</div>
                     <input type="range" id="harmonic_q" min="1" max="20" step="0.5" value="5">
+                </div>
+                <div class="control">
+                    <div class="control-label">Volume</div>
+                    <div class="control-value" id="cicada_amplitude_value">0.0</div>
+                    <input type="range" id="cicada_amplitude" min="0" max="1" step="0.01" value="0.0">
                 </div>
             </div>
     
             <div class="slider-row">
                 <span class="row-title">Rhythm & Echeme Patterns</span>
                 <div class="control">
-                    <label for="pulse_group_size">Grp Size <span id="pulse_group_size_value">6</span></label>
+                    <div class="control-label">Group Size</div>
+                    <div class="control-value" id="pulse_group_size_value">6</div>
                     <input type="range" id="pulse_group_size" min="2" max="12" step="1" value="6">
                 </div>
                 <div class="control">
-                    <label for="sub_group_size">Sub Grp <span id="sub_group_size_value">3</span></label>
+                    <div class="control-label">Sub Group</div>
+                    <div class="control-value" id="sub_group_size_value">3</div>
                     <input type="range" id="sub_group_size" min="2" max="6" step="1" value="3">
                 </div>
                 <div class="control">
-                    <label for="group_spacing">Grp Space <span id="group_spacing_value">20</span></label>
-                    <div class="sin-inputs">
-                        <div>N:<input type="text" id="group_spacing_num_sin" value="1-3"></div>
-                        <div>D:<input type="text" id="group_spacing_den_sin" value="1-2"></div>
-                    </div>
+                    <div class="control-label">Group Space</div>
+                    <div class="control-value" id="group_spacing_value">20</div>
                     <input type="range" id="group_spacing" min="5" max="100" step="1" value="20">
-                </div>
-                <div class="control">
-                    <label for="echeme_rate">Ech Rate <span id="echeme_rate_value">2.0</span></label>
                     <div class="sin-inputs">
-                        <div>N:<input type="text" id="echeme_rate_num_sin" value="2-6"></div>
-                        <div>D:<input type="text" id="echeme_rate_den_sin" value="2-4"></div>
+                        <div>N:<input type="text" id="group_spacing_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="group_spacing_den_sin" value="1"></div>
                     </div>
+                </div>
+                <div class="control">
+                    <div class="control-label">Echo Rate</div>
+                    <div class="control-value" id="echeme_rate_value">2.0</div>
                     <input type="range" id="echeme_rate" min="0" max="10" step="0.1" value="2.0">
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="echeme_rate_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="echeme_rate_den_sin" value="1"></div>
+                    </div>
                 </div>
                 <div class="control">
-                    <label for="echeme_duration">Ech Dur <span id="echeme_duration_value">300</span></label>
+                    <div class="control-label">Echo Duration</div>
+                    <div class="control-value" id="echeme_duration_value">300</div>
                     <input type="range" id="echeme_duration" min="50" max="2000" step="10" value="300">
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="echeme_duration_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="echeme_duration_den_sin" value="1"></div>
+                    </div>
                 </div>
                 <div class="control">
-                    <label for="echeme_duration_detune">Dur Det <span id="echeme_duration_detune_value">0</span></label>
+                    <div class="control-label">Duration Detune</div>
+                    <div class="control-value" id="echeme_duration_detune_value">0</div>
                     <input type="range" id="echeme_duration_detune" min="0" max="2" step="0.1" value="0">
                 </div>
                 <div class="control">
-                    <label for="echeme_spacing">Ech Spc <span id="echeme_spacing_value">200</span></label>
+                    <div class="control-label">Echo Spacing</div>
+                    <div class="control-value" id="echeme_spacing_value">200</div>
                     <input type="range" id="echeme_spacing" min="50" max="1000" step="10" value="200">
+                    <div class="sin-inputs">
+                        <div>N:<input type="text" id="echeme_spacing_num_sin" value="1"></div>
+                        <div>D:<input type="text" id="echeme_spacing_den_sin" value="1"></div>
+                    </div>
                 </div>
                 <div class="control">
-                    <label for="echeme_spacing_detune">Spc Det <span id="echeme_spacing_detune_value">0</span></label>
+                    <div class="control-label">Spacing Detune</div>
+                    <div class="control-value" id="echeme_spacing_detune_value">0</div>
                     <input type="range" id="echeme_spacing_detune" min="0" max="2" step="0.1" value="0">
                 </div>
                 <div class="control">
-                    <label for="phrase_intensity">Intensity <span id="phrase_intensity_value">1.0</span></label>
+                    <div class="control-label">Intensity</div>
+                    <div class="control-value" id="phrase_intensity_value">1.0</div>
                     <input type="range" id="phrase_intensity" min="0.1" max="2.0" step="0.1" value="1.0">
-                </div>
-                <div class="control">
-                    <label for="cicada_amplitude">Volume <span id="cicada_amplitude_value">0.0</span></label>
-                    <input type="range" id="cicada_amplitude" min="0" max="1" step="0.01" value="0.0">
                 </div>
             </div>
         </div>
@@ -364,6 +521,8 @@
         <input type="hidden" id="harmonic_freq_base" value="1600">
         <input type="hidden" id="group_spacing_base" value="20">
         <input type="hidden" id="echeme_rate_base" value="2.0">
+        <input type="hidden" id="echeme_duration_base" value="300">
+        <input type="hidden" id="echeme_spacing_base" value="200">
         
         <div class="sidebar">
 </edits>
@@ -458,6 +617,36 @@
         const phrase_intensity_value_el = document.getElementById ("phrase_intensity_value")
         const cicada_amplitude_el = document.getElementById ("cicada_amplitude")
         const cicada_amplitude_value_el = document.getElementById ("cicada_amplitude_value")
+        
+        // Debug: Check if all slider elements exist
+        const sliderElements = {
+            click_rate_el, click_rate_value_el,
+            click_duration_el, click_duration_value_el,
+            click_jitter_el, click_jitter_value_el,
+            noise_amount_el, noise_amount_value_el,
+            resonant_freq_el, resonant_freq_value_el,
+            resonant_q_el, resonant_q_value_el,
+            harmonic_freq_el, harmonic_freq_value_el,
+            harmonic_q_el, harmonic_q_value_el,
+            pulse_group_size_el, pulse_group_size_value_el,
+            sub_group_size_el, sub_group_size_value_el,
+            group_spacing_el, group_spacing_value_el,
+            echeme_rate_el, echeme_rate_value_el,
+            echeme_duration_el, echeme_duration_value_el,
+            echeme_spacing_el, echeme_spacing_value_el,
+            echeme_duration_detune_el, echeme_duration_detune_value_el,
+            echeme_spacing_detune_el, echeme_spacing_detune_value_el,
+            phrase_intensity_el, phrase_intensity_value_el,
+            cicada_amplitude_el, cicada_amplitude_value_el
+        };
+        
+        Object.entries(sliderElements).forEach(([name, element]) => {
+            if (!element) {
+                console.error(`SLIDER DEBUG: Missing element: ${name}`);
+            } else {
+                console.log(`SLIDER DEBUG: Found element: ${name}`);
+            }
+        });
         
         // species preset buttons
         const preset_greengrocer_btn = document.getElementById ("preset_greengrocer")
@@ -1192,18 +1381,11 @@
         
         // Unified parameter handling pipeline
         function handleParameterChange(paramName, rawValue, forceRegeneration = false) {
+            console.log(`DEBUG: handleParameterChange called with paramName: ${paramName}, rawValue: ${rawValue}`);
             const config = PARAM_CONFIG[paramName];
             if (!config) {
-                console.warn(`Unknown parameter: ${paramName}`);
+                console.warn(`Unknown parameter: ${paramName}`, 'Available params:', Object.keys(PARAM_CONFIG));
                 return;
-            }
-            
-            // Update UI display
-            if (config.valueElement) {
-                const displayValue = config.integer ? Math.floor(rawValue) : 
-                                   config.boolean ? (rawValue ? "ON" : "OFF") :
-                                   rawValue.toFixed(2);
-                document.getElementById(config.valueElement).textContent = displayValue;
             }
             
             // Update base value for stochastic parameters
@@ -1265,94 +1447,128 @@
         // Unified event handlers using parameter pipeline
         click_rate_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: click_rate slider changed to ${value}`);
             document.getElementById("click_rate_base").value = value
+            click_rate_value_el.textContent = value;
+            console.log(`DEBUG: Updated click_rate display to: ${click_rate_value_el.textContent}`);
             handleParameterChange("clickRate", value)
             saveControllerState()
         })
         
         click_duration_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: click_duration slider changed to ${value}`);
+            click_duration_value_el.textContent = value.toFixed(2);
+            console.log(`DEBUG: Updated click_duration display to: ${click_duration_value_el.textContent}`);
             handleParameterChange("clickDuration", value)
             saveControllerState()
         })
         
         click_jitter_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: click_jitter slider changed to ${value}`);
+            click_jitter_value_el.textContent = value.toFixed(2);
             handleParameterChange("clickJitter", value)
             saveControllerState()
         })
         
         noise_amount_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: noise_amount slider changed to ${value}`);
+            noise_amount_value_el.textContent = value.toFixed(2);
             handleParameterChange("noiseAmount", value)
             saveControllerState()
         })
         
         resonant_freq_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: resonant_freq slider changed to ${value}`);
             document.getElementById("resonant_freq_base").value = value
+            resonant_freq_value_el.textContent = Math.round(value);
             handleParameterChange("resonantFreq", value)
             saveControllerState()
         })
         
         resonant_q_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: resonant_q slider changed to ${value}`);
+            resonant_q_value_el.textContent = value.toFixed(1);
             handleParameterChange("resonantQ", value)
             saveControllerState()
         })
         
         harmonic_freq_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: harmonic_freq slider changed to ${value}`);
             document.getElementById("harmonic_freq_base").value = value
+            harmonic_freq_value_el.textContent = Math.round(value);
             handleParameterChange("harmonicFreq", value)
             saveControllerState()
         })
         
         harmonic_q_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: harmonic_q slider changed to ${value}`);
+            harmonic_q_value_el.textContent = value.toFixed(1);
             handleParameterChange("harmonicQ", value)
             saveControllerState()
         })
         
         echeme_rate_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: echeme_rate slider changed to ${value}`);
             document.getElementById("echeme_rate_base").value = value
+            echeme_rate_value_el.textContent = value.toFixed(1);
             handleParameterChange("echemeRate", value)
             saveControllerState()
         })
         
         echeme_duration_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: echeme_duration slider changed to ${value}`);
+            document.getElementById("echeme_duration_base").value = value
+            echeme_duration_value_el.textContent = Math.round(value);
             handleParameterChange("echemeDuration", value)
             saveControllerState()
         })
         
         echeme_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: echeme_spacing slider changed to ${value}`);
+            document.getElementById("echeme_spacing_base").value = value
+            echeme_spacing_value_el.textContent = Math.round(value);
             handleParameterChange("echemeSpacing", value)
             saveControllerState()
         })
         
         echeme_duration_detune_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: echeme_duration_detune slider changed to ${value}`);
+            echeme_duration_detune_value_el.textContent = value.toFixed(1);
             handleParameterChange("echemeDurationDetune", value)
             saveControllerState()
         })
         
         echeme_spacing_detune_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: echeme_spacing_detune slider changed to ${value}`);
+            echeme_spacing_detune_value_el.textContent = value.toFixed(1);
             handleParameterChange("echemeSpacingDetune", value)
             saveControllerState()
         })
         
         phrase_intensity_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: phrase_intensity slider changed to ${value}`);
+            phrase_intensity_value_el.textContent = value.toFixed(1);
             handleParameterChange("phraseIntensity", value)
             saveControllerState()
         })
         
         cicada_amplitude_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: cicada_amplitude slider changed to ${value}`);
+            cicada_amplitude_value_el.textContent = value.toFixed(2);
             handleParameterChange("amplitude", value)
             saveControllerState()
         })
@@ -1360,19 +1576,28 @@
         // Former discrete parameters (now unified)
         pulse_group_size_el.addEventListener ("input", (e) => {
             const value = parseInt (e.target.value)
+            console.log(`DEBUG: pulse_group_size slider changed to ${value}`);
+            pulse_group_size_value_el.textContent = value;
             handleParameterChange("pulseGroupSize", value)
             saveControllerState()
         })
         
         sub_group_size_el.addEventListener ("input", (e) => {
             const value = parseInt (e.target.value)
+            console.log(`DEBUG: sub_group_size slider changed to ${value}`);
+            sub_group_size_value_el.textContent = value;
+            console.log(`DEBUG: Updated sub_group_size display to: ${sub_group_size_value_el.textContent}`);
+            console.log(`DEBUG: sub_group_size_value_el element:`, sub_group_size_value_el);
             handleParameterChange("subGroupSize", value)
             saveControllerState()
         })
         
         group_spacing_el.addEventListener ("input", (e) => {
             const value = parseFloat (e.target.value)
+            console.log(`DEBUG: group_spacing slider changed to ${value}`);
             document.getElementById("group_spacing_base").value = value
+            group_spacing_value_el.textContent = Math.round(value);
+            console.log(`DEBUG: Updated group_spacing display to: ${group_spacing_value_el.textContent}`);
             handleParameterChange("groupSpacing", value)
             saveControllerState()
         })

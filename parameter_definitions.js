@@ -130,7 +130,11 @@ export const PARAM_CONFIG = {
         unit: 0.001, // Convert ms to seconds
         rampTime: 0.1,
         safety: [0.05, 2.0],
-        stochastic: false
+        stochastic: {
+            baseElement: 'echeme_duration_base',
+            numSINElement: 'echeme_duration_num_sin',
+            denSINElement: 'echeme_duration_den_sin'
+        }
     },
 
     echemeSpacing: {
@@ -140,7 +144,11 @@ export const PARAM_CONFIG = {
         unit: 0.001, // Convert ms to seconds
         rampTime: 0.1,
         safety: [0.05, 1.0],
-        stochastic: false
+        stochastic: {
+            baseElement: 'echeme_spacing_base',
+            numSINElement: 'echeme_spacing_num_sin',
+            denSINElement: 'echeme_spacing_den_sin'
+        }
     },
 
     echemeDurationDetune: {
